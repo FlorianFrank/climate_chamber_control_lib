@@ -3,10 +3,56 @@
  */
 
 #include "../include/ClimateChamberWrapper.h"
+#include <cstdint>
+#include <cstdio>
 
 extern "C" {
 #include "helperFiles/Logging.h"
 #include "helperFiles/Socket.h"
+ClimateChamberWrapper ClimateChamberWrapper_py;
+
+void InitializeLogging() {
+    PIL_InitializeLogging(DEBUG_LVL, nullptr);
+}
+bool Initialize() {
+    return ClimateChamberWrapper_py.Initialize();
+}
+bool DeInitialize() {
+    return ClimateChamberWrapper_py.DeInitialize();
+}
+bool RetrieveClimateChamberStatus() {
+    return ClimateChamberWrapper_py.RetrieveClimateChamberStatus();
+}
+float GetCurrentHumidity() {
+    return ClimateChamberWrapper_py.GetCurrentHumidity();
+}
+float GetCurrentTemperature() {
+    return ClimateChamberWrapper_py.GetCurrentTemperature();
+}
+float GetTargetHumidity() {
+    return ClimateChamberWrapper_py.GetTargetHumidity();
+}
+void SetTargetHumidity(float targetHumidity) {
+    ClimateChamberWrapper_py.SetTargetHumidity(targetHumidity);
+}
+float GetTargetTemperature() {
+    return ClimateChamberWrapper_py.GetTargetTemperature();
+}
+void SetTargetTemperature(float targetTemperature) {
+    ClimateChamberWrapper_py.SetTargetTemperature(targetTemperature);
+}
+bool StartExecution() {
+    return ClimateChamberWrapper_py.StartExecution();
+}
+bool StopExecution() {
+    return ClimateChamberWrapper_py.StopExecution();
+}
+bool StartProgram(int programID) {
+    return ClimateChamberWrapper_py.StartProgram(programID);
+}
+bool StopProgram() {
+    return ClimateChamberWrapper_py.StopProgram();
+}
 }
 
 #include <unistd.h> // usleep
@@ -40,7 +86,7 @@ bool ClimateChamberWrapper::Initialize(const char *ipAddr, uint16_t port, uint8_
                        PIL_GetLastErrorStr(m_socket));
         return false;
     }
-
+    
     PIL_LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ipAddr, port);
     if (PIL_Connect(m_socket, ipAddr, port) != 0)
     {
