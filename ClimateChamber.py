@@ -11,6 +11,7 @@ _climate.InitializeLogging.restype = ctypes.c_void_p
 _climate.InitializeLogging()
 
 _climate.Initialize.restype = ctypes.c_bool
+_climate.Initialize.argtypes = [ctypes.c_char_p, ctypes.c_int16, ctypes.c_int8]
 _climate.DeInitialize.restype = ctypes.c_bool
 
 _climate.RetrieveClimateChamberStatus.restype = ctypes.c_bool
@@ -29,8 +30,8 @@ _climate.StartProgram.restype = ctypes.c_bool
 
 _climate.StopProgram.restype = ctypes.c_bool
 
-def initialize_chamber():
-    return _climate.Initialize()
+def initialize_chamber(ipAdress, port, channel):
+    return _climate.Initialize(ctypes.c_char_p(ipAdress), ctypes.c_int16(port), ctypes.c_int8(channel))
 
 def deinitialize_chamber():
     return _climate.DeInitialize()
@@ -68,6 +69,4 @@ def start_program(programID):
 def stop_program():
     return _climate.StopProgram()
 
-if __name__ == "__main__":
-    initialize_chamber()
     

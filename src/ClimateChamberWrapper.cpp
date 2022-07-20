@@ -14,8 +14,8 @@ ClimateChamberWrapper ClimateChamberWrapper_py;
 void InitializeLogging() {
     PIL_InitializeLogging(DEBUG_LVL, nullptr);
 }
-bool Initialize() {
-    return ClimateChamberWrapper_py.Initialize();
+bool Initialize(const char *ipAddr, uint16_t port, uint8_t channel) {
+    return ClimateChamberWrapper_py.Initialize(ipAddr, port, channel);
 }
 bool DeInitialize() {
     return ClimateChamberWrapper_py.DeInitialize();
