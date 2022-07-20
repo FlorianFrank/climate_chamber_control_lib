@@ -5,7 +5,7 @@
 #ifndef CLIMATECHAMBERCONTROLLIB_MAIN_CPP
 #define CLIMATECHAMBERCONTROLLIB_MAIN_CPP
 
-#include <ClimateChamberWrapper.h>
+#include "ClimateChamberWrapper.h"
 #include <unistd.h>
 
 extern "C"{

@@ -2,13 +2,14 @@
  * @author Florian Frank
  */
 
-#include "../include/ClimateChamberWrapper.h"
+#include "ClimateChamberWrapper.h"
+#include "ctlib/Socket.hpp"
+
 #include <cstdint>
 #include <cstdio>
 
 extern "C" {
 #include "helperFiles/Logging.h"
-#include "helperFiles/Socket.h"
 ClimateChamberWrapper ClimateChamberWrapper_py;
 
 void InitializeLogging() {
@@ -79,19 +80,21 @@ ClimateChamberWrapper::~ClimateChamberWrapper()
 bool ClimateChamberWrapper::Initialize(const char *ipAddr, uint16_t port, uint8_t channel)
 {
     m_channel = channel;
-    m_socket = new PIL_Socket;
-    if (PIL_CreateSocket(m_socket, TRANSPORT_TCP, IP_VERSION_4, "127.0.0.1", 8080) != 0)
+    m_socket = new PIL::Socket(TCP, IPv4, "127.0.0.1", 8080, 1000);
+    if (m_socket->GetLastError() != PIL_NO_ERROR)
     {
         PIL_LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error could not create Socket (%d)",
-                       PIL_GetLastErrorStr(m_socket));
+                       m_socket->GetLastError());
         return false;
     }
     
     PIL_LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ipAddr, port);
-    if (PIL_Connect(m_socket, ipAddr, port) != 0)
+    std::string ipToConnect = ipAddr;
+    m_socket->Connect(ipToConnect, port);
+    if (m_socket->GetLastError() != PIL_NO_ERROR)
     {
         PIL_LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error could not bind helperFiles (%s)",
-                       PIL_GetLastErrorStr(m_socket));
+                       m_socket->GetLastError());
         return false;
     }
     PIL_LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate chamber initialized");
@@ -577,7 +580,8 @@ bool ClimateChamberWrapper::SendCommandGetResponse(std::map<CommandReturnValues,
     va_end(vaList);
 
     PIL_LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "RetrieveClimateChamber status => send: \n[%s])", commandBuffer);
-    if (PIL_Send(m_socket, commandBuffer, &commandBufferSize) != 0)
+    m_socket->Send(commandBuffer, reinterpret_cast<int*>(&commandBufferSize)); // TODO cleanup
+    if (m_socket->GetLastError() != PIL_NO_ERROR)
     {
         PIL_LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
         return false;
@@ -595,10 +599,10 @@ bool ClimateChamberWrapper::SendCommandGetResponse(std::map<CommandReturnValues,
 int ctr = 0;
     do
     {
-        waitRet = PIL_WaitTillDataAvail(m_socket, 5000);
-	if(waitRet <= 0){
-		PIL_LogMessage(WARNING_LVL, __FUNCTION__, __LINE__, "No data avail retry %d %s", waitRet, PIL_GetLastErrorStr(m_socket));
-	if(ctr > 5){
+        waitRet = m_socket->WaitTillDataAvailable();
+	if(waitRet <= PIL_SOCK_SUCCESS){
+		PIL_LogMessage(WARNING_LVL, __FUNCTION__, __LINE__, "No data avail retry %d %s", waitRet, m_socket->GetLastError());
+	if(ctr > 5){ // TODO what the hell is that?
                 PIL_LogMessage(WARNING_LVL, __FUNCTION__, __LINE__, "No data available within 5 seconds");
 
 	 return false;
@@ -608,7 +612,8 @@ ctr++;
     }    while(waitRet <= 0);
 
 PIL_LogMessage(DEBUG_LVL, __FUNCTION__, __LINE__, "Data avail ->Read");
-         ret = PIL_Receive(m_socket, receiveBuffer, &bufferLen);
+
+         m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t*>(&bufferLen));
 	printf("%s\n", receiveBuffer);
 PIL_LogMessage(DEBUG_LVL, __FUNCTION__, __LINE__, "Read finished");
 
@@ -925,7 +930,8 @@ bool ClimateChamberWrapper::StartStopExecution(int command)
         return false;
     }
     PIL_LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Send command %s", commandBuffer);
-    if (PIL_Send(m_socket, commandBuffer, &commandBufferSize) != 0)
+    m_socket->Send(commandBuffer, reinterpret_cast<int*>(&commandBufferSize));
+    if (m_socket->GetLastError() != PIL_NO_ERROR)
     {
         PIL_LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
         return false;
@@ -933,7 +939,7 @@ bool ClimateChamberWrapper::StartStopExecution(int command)
     uint8_t receiveBuffer[512];
     memset(receiveBuffer, 0x00, 512);
     uint16_t bufferLen = 512;
-    PIL_Receive(m_socket, receiveBuffer, &bufferLen);
+    m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen)); // TODO
     std::map<ClimateChamberWrapper::CommandReturnValues, std::string> parsedCommandMap;
     if (!CommandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap))
     {

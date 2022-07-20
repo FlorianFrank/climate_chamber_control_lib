@@ -9,7 +9,9 @@
 #include <map> // std::map
 
 /** Forward declaration avoid include of socket file*/
-struct PIL_Socket;
+namespace PIL {
+    class Socket;
+}
 
 /**
  * @class This class is a wrapper to control the Weiss Technik LabEvent climate simulation chamber.
@@ -192,7 +194,7 @@ private:
     float m_CurrentHumidity{};
 
     /** Socket to connect with the climate chamber. */
-    PIL_Socket *m_socket{};
+    PIL::Socket *m_socket{};
 
     /** Thread object used for the asynchronous transfer of humidity and temperature values from the climate chamber. */
     std::thread *m_MonitorThread{};
