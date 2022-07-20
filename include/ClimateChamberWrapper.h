@@ -7,6 +7,7 @@
 #include <thread> // std::thread
 #include <mutex> // std::mutex
 #include <map> // std::map
+#include "ctlib/Logging.hpp"
 
 /** Forward declaration avoid include of socket file*/
 namespace PIL {
@@ -208,6 +209,8 @@ private:
      * from the continuous thread and the GetTemperature and GetHumidity methods.
     */
     std::mutex m_HumidityLock;
+
+    static PIL::Logging m_Logger;
 
     /**
      * @brief Callback function is called from the monitor thread if either the humidity or the temperature changes.

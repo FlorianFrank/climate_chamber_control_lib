@@ -8,13 +8,8 @@
 #include "ClimateChamberWrapper.h"
 #include <unistd.h>
 
-extern "C"{
-#include <helperFiles/Logging.h>
-}
-
 int main()
 {
-    PIL_InitializeLogging(DEBUG_LVL, nullptr);
     ClimateChamberWrapper climateChamberWrapper;
     climateChamberWrapper.Initialize();
     climateChamberWrapper.RetrieveClimateChamberStatus();
@@ -33,7 +28,6 @@ int main()
     printf("Receive error code %d\n", errCode);
 
     climateChamberWrapper.AcknowledgeErrors();
-    PIL_CloseLogfile();
 }
 
 #endif //CLIMATECHAMBERCONTROLLIB_MAIN_CPP
