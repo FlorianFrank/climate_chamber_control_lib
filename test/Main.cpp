@@ -11,7 +11,8 @@
 int main()
 {
     ClimateChamberWrapper climateChamberWrapper;
-    climateChamberWrapper.Initialize();
+    std::string ip = "132.321.14.161";
+    climateChamberWrapper.Initialize(ip);
     climateChamberWrapper.RetrieveClimateChamberStatus();
 
     climateChamberWrapper.SetTargetTemperature(23);

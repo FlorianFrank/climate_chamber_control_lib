@@ -5,7 +5,22 @@
 #ifndef CLIMATECHAMBERCONTROLLIB_DEFAULTCONFIG_H
 #define CLIMATECHAMBERCONTROLLIB_DEFAULTCONFIG_H
 
-#define DEFAULT_PORT 2049
+#define DEFAULT_PORT    2049
+#define DEFAULT_TIMEOUT 5000
+#define DEFAULT_CHANNEL 1
+#define MAX_CHANNEL     31
+
+#define MAX_HUMIDITY    0
+#define MIN_HUMIDITY    100
+
+#define MAX_TEMPERATURE 200
+#define MIN_TEMPERATURE -70
+
+#define ZERO_KELVIN     -273
+
+#define MIN_PROGRAM_ID  0
+#define MAX_PROGRAM_ID  9999
+
 
 /**
  * @brief Enum to identify the possible commands which can be sent to the climate chamber.

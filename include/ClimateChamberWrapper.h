@@ -35,10 +35,10 @@ public:
      * @brief Initialize the connection to the climate chamber. Opens the TCP/IP socket to the climate chamber.
      * @param ipAddr ipAddress to reach the climate chamber.
      * @param port port on which the climate chamber listens for ASCII-2 commands.
-     * @param channel TODO
+     * @param channel TODO requires further explanation and checks
      * @return if successful return true, else false is returned.
      */
-    bool Initialize(std::string &ipAddr, uint16_t port, uint8_t channel = 1); // TODO what does this channel mean??
+    bool Initialize(const std::string &ipAddr, uint16_t port = DEFAULT_PORT, uint8_t channel = DEFAULT_CHANNEL); // TODO what does this channel mean??
 
     /**
      * @brief Closes the socket to the climate chamber. Joins the thread, which continuously
@@ -166,7 +166,7 @@ private:
     /** Channel of the climate chamber. Allowed are values from 0 - 32 (default: 1)*/
     uint8_t m_channel = 1;
 
-    int m_MonitoringThreadInterval = 5000;
+    int m_MonitoringThreadInterval = DEFAULT_TIMEOUT;
 
     /** Target temperature which is approximated after starting the chamber.
      *  A test can be started when the target temperature == the current temperature. */
@@ -258,5 +258,8 @@ private:
 
 
     bool StartStopExecution(int command);
+
+    static bool LogMessageAndReturn(bool returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
+
 
 };
