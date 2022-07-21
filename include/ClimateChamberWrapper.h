@@ -1,15 +1,19 @@
 /**
  * @author Florian Frank
+ * @copyright University of Passau - Chair of Computer Engineering
  */
 
 #pragma once
 
+#include "ClimateChamberWrapperDefines.h"
+#include "ctlib/Logging.hpp"
+
+
 #include <thread> // std::thread
 #include <mutex> // std::mutex
 #include <map> // std::map
-#include "ctlib/Logging.hpp"
 
-/** Forward declaration avoid include of socket file*/
+/** Forward declaration avoid include of socket file from PIL library*/
 namespace PIL {
     class Socket;
 }
@@ -31,9 +35,10 @@ public:
      * @brief Initialize the connection to the climate chamber. Opens the TCP/IP socket to the climate chamber.
      * @param ipAddr ipAddress to reach the climate chamber.
      * @param port port on which the climate chamber listens for ASCII-2 commands.
+     * @param channel TODO
      * @return if successful return true, else false is returned.
      */
-    bool Initialize(const char *ipAddr = "192.168.139.112", uint16_t port = 2049, uint8_t channel = 1);
+    bool Initialize(std::string &ipAddr, uint16_t port, uint8_t channel = 1); // TODO what does this channel mean??
 
     /**
      * @brief Closes the socket to the climate chamber. Joins the thread, which continuously
@@ -150,26 +155,7 @@ public:
      * @brief Function returns if the climate chamber is currently running or not.
      * @return true if temperature chamber is active.
      */
-    bool IsRunning() const { return m_Running; }
-
-    /**
-     * @brief Enum to identify the possible commands which can be sent to the climate chamber.
-     */
-    enum ClimateChamberCommand
-    {
-        /** Retrieve current and target temperature and humidity values. */
-        GET_TEMPERATURE_HUMIDITY,
-        /** Set target temperature and humidity values and starts the execution of the climate chamber. */
-        SET_TEMPERATURE_HUMIDITY,
-        /** Command returns the last error from the climate chamber. */
-        GET_ERROR,
-        /** Command acknowledges all errors from the climate chamber. */
-        ACKNOWLEDGE_ERRORS,
-        /** Command starts a program, defined on the climate chamber. */
-        START_PROGRAM,
-        /** Commands stops the execution of a program stored on the climate chamber. */
-        STOP_PROGRAM
-    };
+    [[nodiscard]] bool IsRunning() const { return m_Running; }
 
 private:
     /** Flag indicates if the climate chamber is initialized. **/

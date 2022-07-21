@@ -79,7 +79,7 @@ ClimateChamberWrapper::~ClimateChamberWrapper()
 }
 
 
-bool ClimateChamberWrapper::Initialize(const char *ipAddr, uint16_t port, uint8_t channel)
+bool ClimateChamberWrapper::Initialize(std::string &ipAddr, uint16_t port, uint8_t channel)
 {
     m_channel = channel;
     m_socket = new PIL::Socket(TCP, IPv4, "127.0.0.1", 8080, 1000);
