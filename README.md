@@ -38,7 +38,7 @@ test application is installed in the **bin** folder and has the following struct
 │     
 └─── 📂 bin
 │   └─── 📂 lib
-│   │    │  📜 climate_chamber_control_lib
+│   │    │  📜 climate_chamber_lib
 │   │    │  📜 common_tools_lib
 │   └─── 📂 bin
 │   │     |  📜 ClimateChamberTest.exe
@@ -54,7 +54,7 @@ test application is installed in the **bin** folder and has the following struct
 
 ### 2.1 Using the C++-interface
 
-Link the climate_chamber_control.lib to your project and include the header file climate_chamber_control.h.
+Link the climate_chamber_lib to your project and include the header file climate_chamber_control.h.
     
 e.g. using CMAKE
 ```cmake
@@ -103,33 +103,33 @@ The climate_chamber_control_library can be accessed by copying the library file 
 by importing it using following command: 
 
 ```python
-from climate_chamber_control import *
+from py_climate_chamber_lib import *
 ```
 
 The api itself is identical to the C++ API described in Section 3. 
 
 ```python
-from climate_chamber_control import *
+from py_climate_chamber_lib import *
 
 chamber = ClimateChamberControl()
 
 if not chamber.initialize("<your_ip_address>"):
-    chamber.GetLastError()
+    chamber.get_last_error()
 
-chamber.setTargetTemperature(26.5)
-chamber.setTargetHumidity(30.0)
+chamber.set_target_temperature(26.5)
+chamber.set_target_humidity(30.0)
 
-chamber.startMonitorThread(5000)
+chamber.start_monitor_thread(5000)
 
 callback = lambda humidity, temperature: print("Humidity: " + str(humidity) + " Temperature: " + str(temperature))
 
-chamber.RegisterTemperatureCallback(callback)
-chamber.startExecution()
+chamber.register_humid_temp_callback(callback)
+chamber.start_execution()
 
 # Do some stuff here
 
-chamber.stopExecution()
-chamber.Deinitialize()
+chamber.stop_execution()
+chamber.deinitialize()
 ```
 
 ## 3 API-description
