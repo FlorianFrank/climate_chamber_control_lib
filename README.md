@@ -2,7 +2,9 @@
 
 This project provides a library to control a Weisstechnik LabEvent climate chamber via an API interface. 
 It allows to set the humidity and temperature, receive error messages and warnings and acknowledge them. 
-The current temperature and humidity can be received by an callback function.
+The current temperature and humidity can be received by a callback function.
+
+**Some parts of this documentation are currently missing bur will be added soon.**
 
 ## 1. Installation
 
@@ -26,6 +28,26 @@ git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
 ```bash
 git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
 ./compile.ps
+```
+
+By running **compile.sh** or **compile.ps** the library, a test application as well as the underlying abstraction library 
+**common_tools_lib** providing basic functionality like logging or sockets is build. Finally, the library, headers, and the 
+test application is installed in the **bin** folder and has the following structure: 
+```
+📦 project
+│     
+└─── 📂 bin
+│   └─── 📂 lib
+│   │    │  📜 climate_chamber_control_lib
+│   │    │  📜 common_tools_lib
+│   └─── 📂 bin
+│   │     |  📜 ClimateChamberTest.exe
+│   └─── 📂 include
+│        |  📜 <include files>
+│
+│
+└─── 📂 tmp
+     │   📜 <temporary files which can be deleted after the build>
 ```
 
 ## 2. Run a simple test program
@@ -72,6 +94,42 @@ int main() {
 
     chamber.StopExecution();
     chamber.Deinitialize();
+```
+
+### 2.1 Using the python-interface
+
+The library can be accessed by a python interface as well. To run the library requires a python version < ??. 
+The climate_chamber_control_library can be accessed by copying the library file directly next to the python script and
+by importing it using following command: 
+
+```python
+from climate_chamber_control import *
+```
+
+The api itself is identical to the C++ API described in Section 3. 
+
+```python
+from climate_chamber_control import *
+
+chamber = ClimateChamberControl()
+
+if not chamber.Initialize("<your_ip_address>"):
+    chamber.GetLastError()
+
+chamber.SetTargetTemperature(26.5)
+chamber.SetTargetHumidity(30.0)
+
+chamber.StartMonitorThread(5000)
+
+callback = lambda humidity, temperature: print("Humidity: " + str(humidity) + " Temperature: " + str(temperature))
+
+chamber.RegisterTemperatureCallback(callback)
+chamber.StartExecution()
+
+# Do some stuff here
+
+chamber.StopExecution()
+chamber.Deinitialize()
 ```
 
 ## 3 API-description
