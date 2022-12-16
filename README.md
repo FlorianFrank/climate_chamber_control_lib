@@ -45,12 +45,33 @@ target_include_directory(SampleProject PUBLIC climate_chamber_control_lib/includ
 target_link_libraries(SampleProject climate_chamber_control)
 ```
 
+A sample program on how to use the climate chamber is provided in following code snipped:
+
 ```c++
 #include <ClimateChamberControl.h>
 
 int main() {
     ClimateChamberControl chamber;
-    chamber.connect("
+    if(!chamber.Initialize("<your_ip_address>")) // The standard port to access the climate chamber is 8080
+        std::cout << "Error: " << chamber.GetLastError() << std::endl;
+        
+    chamber.SetTargetTemperature(26.5);
+    chamber.SetTargetHumidity(30.0);
+    
+    chamber.StartMonitorThread(5000);
+    
+    auto callback = [](float humidity, float temperature) {
+        std::cout << "Humidity: " << humidity << " Temperature: " << temperature << std::endl;
+    };
+    
+    chamber.RegisterTemperatureCallback(callback);
+    
+    chamber.StartExecution();
+    
+    /*** Do some stuff here ***/
+
+    chamber.StopExecution();
+    chamber.Deinitialize();
 ```
 
 ## 3 API-description
