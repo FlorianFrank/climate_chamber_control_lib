@@ -28,6 +28,26 @@ git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
 ./compile.ps
 ```
 
+By running **compile.sh** or **compile.ps** the library, a test application as well as the underlying abstraction library 
+**common_tools_lib** providing basic functionality like logging or sockets is build. Finally, the library, headers, and the 
+test application is installed in the **bin** folder and has the following structure: 
+```
+📦 project
+│     
+└─── 📂 bin
+│   └─── 📂 lib
+│   │    │  📜 climate_chamber_control_lib
+│   │    │  📜 common_tools_lib
+│   └─── 📂 bin
+│   │     |  📜 ClimateChamberTest.exe
+│   └─── 📂 include
+│        |  📜 <include files>
+│
+│
+└─── 📂 tmp
+     │   📜 <temporary files which can be deleted after the build>
+```
+
 ## 2. Run a simple test program
 
 ### 2.1 Using the C++-interface
