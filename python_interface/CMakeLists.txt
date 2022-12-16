@@ -17,4 +17,4 @@ target_include_directories(py_climate_chamber_lib PRIVATE   ${CMAKE_CURRENT_SOUR
                                                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
                                                             ${CMAKE_CURRENT_SOURCE_DIR}/../common_tools_lib/Logger/include)
 
-target_link_libraries(py_climate_chamber_lib PRIVATE ClimateChamberControlLib)
+target_link_libraries(py_climate_chamber_lib PRIVATE climate_chamber_lib)
