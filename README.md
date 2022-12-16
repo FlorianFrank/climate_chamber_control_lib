@@ -94,6 +94,42 @@ int main() {
     chamber.Deinitialize();
 ```
 
+### 2.1 Using the python-interface
+
+The library can be accessed by a python interface as well. To run the library requires a python version < ??. 
+The climate_chamber_control_library can be accessed by copying the library file directly next to the python script and
+by importing it using following command: 
+
+```python
+from climate_chamber_control import *
+```
+
+The api itself is identical to the C++ API described in Section 3. 
+
+```python
+from climate_chamber_control import *
+
+chamber = ClimateChamberControl()
+
+if not chamber.Initialize("<your_ip_address>"):
+    chamber.GetLastError()
+
+chamber.SetTargetTemperature(26.5)
+chamber.SetTargetHumidity(30.0)
+
+chamber.StartMonitorThread(5000)
+
+callback = lambda humidity, temperature: print("Humidity: " + str(humidity) + " Temperature: " + str(temperature))
+
+chamber.RegisterTemperatureCallback(callback)
+chamber.StartExecution()
+
+# Do some stuff here
+
+chamber.StopExecution()
+chamber.Deinitialize()
+```
+
 ## 3 API-description
 
 The api supports following functions: 
