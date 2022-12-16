@@ -38,7 +38,7 @@ test application is installed in the **bin** folder and has the following struct
 │     
 └─── 📂 bin
 │   └─── 📂 lib
-│   │    │  📜 climate_chamber_control_lib
+│   │    │  📜 climate_chamber_lib
 │   │    │  📜 common_tools_lib
 │   └─── 📂 bin
 │   │     |  📜 ClimateChamberTest.exe
@@ -54,7 +54,7 @@ test application is installed in the **bin** folder and has the following struct
 
 ### 2.1 Using the C++-interface
 
-Link the climate_chamber_control.lib to your project and include the header file climate_chamber_control.h.
+Link the climate_chamber_lib to your project and include the header file climate_chamber_control.h.
     
 e.g. using CMAKE
 ```cmake
@@ -74,13 +74,13 @@ A sample program on how to use the climate chamber is provided in following code
 
 int main() {
     ClimateChamberControl chamber;
-    if(!chamber.Initialize("<your_ip_address>")) // The standard port to access the climate chamber is 8080
+    if(!chamber.initialize("<your_ip_address>")) // The standard port to access the climate chamber is 8080
         std::cout << "Error: " << chamber.GetLastError() << std::endl;
         
-    chamber.SetTargetTemperature(26.5);
-    chamber.SetTargetHumidity(30.0);
+    chamber.setTargetTemperature(26.5);
+    chamber.setTargetHumidity(30.0);
     
-    chamber.StartMonitorThread(5000);
+    chamber.startMonitorThread(5000);
     
     auto callback = [](float humidity, float temperature) {
         std::cout << "Humidity: " << humidity << " Temperature: " << temperature << std::endl;
@@ -88,11 +88,11 @@ int main() {
     
     chamber.RegisterTemperatureCallback(callback);
     
-    chamber.StartExecution();
+    chamber.startExecution();
     
     /*** Do some stuff here ***/
 
-    chamber.StopExecution();
+    chamber.stopExecution();
     chamber.Deinitialize();
 ```
 
@@ -103,33 +103,33 @@ The climate_chamber_control_library can be accessed by copying the library file 
 by importing it using following command: 
 
 ```python
-from climate_chamber_control import *
+from py_climate_chamber_lib import *
 ```
 
 The api itself is identical to the C++ API described in Section 3. 
 
 ```python
-from climate_chamber_control import *
+from py_climate_chamber_lib import *
 
 chamber = ClimateChamberControl()
 
-if not chamber.Initialize("<your_ip_address>"):
-    chamber.GetLastError()
+if not chamber.initialize("<your_ip_address>"):
+    chamber.get_last_error()
 
-chamber.SetTargetTemperature(26.5)
-chamber.SetTargetHumidity(30.0)
+chamber.set_target_temperature(26.5)
+chamber.set_target_humidity(30.0)
 
-chamber.StartMonitorThread(5000)
+chamber.start_monitor_thread(5000)
 
 callback = lambda humidity, temperature: print("Humidity: " + str(humidity) + " Temperature: " + str(temperature))
 
-chamber.RegisterTemperatureCallback(callback)
-chamber.StartExecution()
+chamber.register_humid_temp_callback(callback)
+chamber.start_execution()
 
 # Do some stuff here
 
-chamber.StopExecution()
-chamber.Deinitialize()
+chamber.stop_execution()
+chamber.deinitialize()
 ```
 
 ## 3 API-description
@@ -138,21 +138,21 @@ The api supports following functions:
 
 | Method Name                                                 | Description                                                                                                                                | Return value                                                      | 
 |-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| bool Initialize(ipAddr, port, channel);                     | Establishes a connection to the climate chamber.                                                                                           | Returns true if the connection could be established successfully. |
-| bool DeInitialize()                                         | Closes the connection to the climate chamber.                                                                                              | True if command was successful.                                   |
-| bool RetrieveClimateChamberStatus()                         | Sends a status request to the climate chamber to get the current temperature and humidity and stores them in the climate chamber object.   | True if command was successful.                                   |
-| float GetCurrentTemperature()                               | Get the temperature retrieved from the last RetrieveClimateChamberStatus() call.                                                           | Last retrieved temperature.                                       |
-| float GetCurrentHumidity()                                  | Get the humidity retrieved from the last RetrieveClimateChamberStatus() call.                                                              | Last retrieved humidity.                                          |
-| float GetTargetTemperature()                                | Returns the target temperature which should finally be reached during a cool down or heat up progress.                                     | Target temperature.                                               |
-| float GetTargetHumidity()                                   | Returns the target humidity which should finally be reached.                                                                               | Target humidity.                                                  |
-| bool SetTargetTemperature()                                 | Sets the target temperature to reach after starting or stopping the chamber.                                                               | True if command was successful.                                   |
-| bool SetTargetHumidity()                                    | Sets the target humidity to reach after starting or stopping the chamber.                                                                  | True if command was successful.                                   |
-| bool StartExecution()                                       | Starts the climate chamber to heat up or cool down to the temperature and humidity adjusted by SetTargetHumidity and SetTargetTemperature. | True if command was successful.                                   |
-| bool StopExecution()                                        | Stops the execution of the climate chamber.                                                                                                | True if command was successful.                                   |
-| bool StartProgram(id)                                       | Start a specific program stored on the climate chamber, identified by an id.                                                               | True if command was successful.                                   |
-| bool StopProgram()                                          | Stop a currently running program.                                                                                                          | True if command was successful.                                   |
-| bool GetErrorCode(errCode)                                  | Starts the climate chamber to heat up or cool down to the temperature and humidity adjusted by SetTargetHumidity and SetTargetTemperature. | True if command was successful.                                   |
-| bool AcknowledgeErrors()                                    | Acknowledge all errors stored in the error buffer.                                                                                         | True if command was successful.                                   |
- | bool StartMonitorThread(int intervalMs)                     | Starts a thread which periodically calls RetrieveClimateChamberStatus() to update the current temperature.                                 | True if command was successful.                                   |
-| bool RegisterHumidityTemperatureCallback(callback Function) | Registers a callback function which is called everytime the temperature or humidity of the chamber changes.                                | -                                                                 |
-| bool IsRunning()                                            | Returns if the chamber is currently running or not.                                                                                        | True if cahmber is running, otherwise return False.               |
+| bool initialize(ipAddr, port, channel);                     | Establishes a connection to the climate chamber.                                                                                           | Returns true if the connection could be established successfully. |
+| bool deInitialize()                                         | Closes the connection to the climate chamber.                                                                                              | True if command was successful.                                   |
+| bool retrieveClimateChamberStatus()                         | Sends a status request to the climate chamber to get the current temperature and humidity and stores them in the climate chamber object.   | True if command was successful.                                   |
+| float getCurrentTemperature()                               | Get the temperature retrieved from the last retrieveClimateChamberStatus() call.                                                           | Last retrieved temperature.                                       |
+| float getCurrentHumidity()                                  | Get the humidity retrieved from the last retrieveClimateChamberStatus() call.                                                              | Last retrieved humidity.                                          |
+| float getTargetTemperature()                                | Returns the target temperature which should finally be reached during a cool down or heat up progress.                                     | Target temperature.                                               |
+| float getTargetHumidity()                                   | Returns the target humidity which should finally be reached.                                                                               | Target humidity.                                                  |
+| bool setTargetTemperature()                                 | Sets the target temperature to reach after starting or stopping the chamber.                                                               | True if command was successful.                                   |
+| bool setTargetHumidity()                                    | Sets the target humidity to reach after starting or stopping the chamber.                                                                  | True if command was successful.                                   |
+| bool startExecution()                                       | Starts the climate chamber to heat up or cool down to the temperature and humidity adjusted by setTargetHumidity and setTargetTemperature. | True if command was successful.                                   |
+| bool stopExecution()                                        | Stops the execution of the climate chamber.                                                                                                | True if command was successful.                                   |
+| bool startProgram(id)                                       | Start a specific program stored on the climate chamber, identified by an id.                                                               | True if command was successful.                                   |
+| bool stopProgram()                                          | Stop a currently running program.                                                                                                          | True if command was successful.                                   |
+| bool getErrorCode(errCode)                                  | Starts the climate chamber to heat up or cool down to the temperature and humidity adjusted by setTargetHumidity and setTargetTemperature. | True if command was successful.                                   |
+| bool acknowledgeErrors()                                    | Acknowledge all errors stored in the error buffer.                                                                                         | True if command was successful.                                   |
+ | bool startMonitorThread(int intervalMs)                     | Starts a thread which periodically calls retrieveClimateChamberStatus() to update the current temperature.                                 | True if command was successful.                                   |
+| bool registerHumidityTemperatureCallback(callback Function) | Registers a callback function which is called everytime the temperature or humidity of the chamber changes.                                | -                                                                 |
+| bool isRunning()                                            | Returns if the chamber is currently running or not.                                                                                        | True if cahmber is running, otherwise return False.               |

@@ -5,30 +5,30 @@
 #ifndef CLIMATECHAMBERCONTROLLIB_MAIN_CPP
 #define CLIMATECHAMBERCONTROLLIB_MAIN_CPP
 
-#include "ClimateChamberWrapper.h"
+#include "ClimateChamberControl.h"
 #include <unistd.h>
 
 int main()
 {
-    ClimateChamberWrapper climateChamberWrapper;
+    ClimateChamberControl climateChamberWrapper;
     std::string ip = "132.321.14.161";
-    climateChamberWrapper.Initialize(ip);
-    climateChamberWrapper.RetrieveClimateChamberStatus();
+    climateChamberWrapper.initialize(ip);
+    climateChamberWrapper.retrieveClimateChamberStatus();
 
-    climateChamberWrapper.SetTargetTemperature(23);
-    climateChamberWrapper.SetTargetHumidity(80);
-    climateChamberWrapper.StartExecution();
-    climateChamberWrapper.StopProgram();
+    climateChamberWrapper.setTargetTemperature(23);
+    climateChamberWrapper.setTargetHumidity(80);
+    climateChamberWrapper.startExecution();
+    climateChamberWrapper.stopProgram();
 
 
-    printf("Current humidity %f\n", climateChamberWrapper.GetCurrentHumidity());
-    printf("Current temperature %f\n", climateChamberWrapper.GetCurrentTemperature());
+    printf("Current humidity %f\n", climateChamberWrapper.getCurrentHumidity());
+    printf("Current temperature %f\n", climateChamberWrapper.getCurrentTemperature());
 
     int errCode;
-    climateChamberWrapper.GetErrorCode(&errCode);
+    climateChamberWrapper.getErrorCode(&errCode);
     printf("Receive error code %d\n", errCode);
 
-    climateChamberWrapper.AcknowledgeErrors();
+    climateChamberWrapper.acknowledgeErrors();
 }
 
 #endif //CLIMATECHAMBERCONTROLLIB_MAIN_CPP

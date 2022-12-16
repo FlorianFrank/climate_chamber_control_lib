@@ -1,0 +1,266 @@
+/**
+ * @author Florian Frank
+ * @copyright University of Passau - Chair of Computer Engineering
+ */
+
+#pragma once
+
+#include "ClimateChamberDefines.h"
+#include "../common_tools_lib/Logging/include/ctlib/Logging.h"
+#include "../common_tools_lib/Logging/include/ctlib/Logging.hpp"
+
+
+#include <thread> // std::thread
+#include <mutex> // std::mutex
+#include <map> // std::map
+
+/** Forward declaration avoid include of socket file from PIL library*/
+namespace PIL {
+    class Socket;
+}
+
+/**
+ * @class This class is a wrapper to control the Weiss Technik LabEvent climate simulation chamber.
+ *        The functions are implemented in a python script which is called by the methods of this class.
+ */
+class ClimateChamberControl
+{
+public:
+    /** Default constructor. */
+    ClimateChamberControl();
+
+    /** Destructor stops the climate chamber execution and joins the monitor thread. */
+    ~ClimateChamberControl();
+
+    /**
+     * @brief initialize the connection to the climate chamber. Opens the TCP/IP socket to the climate chamber.
+     * @param ipAddr ipAddress to reach the climate chamber.
+     * @param port port on which the climate chamber listens for ASCII-2 commands.
+     * @param channel TODO requires further explanation and checks
+     * @return if successful return true, else false is returned.
+     */
+    bool initialize(const std::string &ipAddr, uint16_t port = DEFAULT_PORT, uint8_t channel = DEFAULT_CHANNEL); // TODO what does this channel mean??
+
+    /**
+     * @brief Closes the socket to the climate chamber. Joins the thread, which continuously
+     *        fetches humidity and temperature data from the climate chamber.
+     * @return if successful return true, else false is returned.
+     */
+    bool deInitialize();
+
+    /**
+     * @brief Retrieves the current temperature, the target temperature, the current humidity, such as the target humidity from the climate chamber.
+     *          The values are stored as member variables in this class and can be accessed by calling getCurrentHumidity, getTargetTemperature, etc.
+     * @return if successful return true, else false is returned.
+     */
+    bool retrieveClimateChamberStatus();
+
+    /**
+     * @brief Returns the last received current temperature value of the climate chamber.
+     * @return current temperature of the climate chamber.
+     */
+    float getCurrentTemperature();
+
+    /**
+     * @brief Returns the last received current humidity value of the climate chamber.
+     * @return current humidity of the climate chamber.
+     */
+    float getCurrentHumidity();
+
+    /**
+     * @brief Returns the last received target temperature value of the climate chamber.
+     * @return target temperature of the climate chamber.
+     */
+    float getTargetTemperature();
+
+    /**
+     * @brief Returns the last received target humidity value of the climate chamber.
+     * @return target humidity of the climate chamber.
+     */
+    float getTargetHumidity();
+
+    /**
+     * @brief Sets the target temperature of the climate chamber. The climate chamber is adjusted to this value when startExecution is called.
+     * @param targetTemperature temperature to set.
+     * @return true if temperature is in the acceptance range, else return 0.
+     */
+    bool setTargetTemperature(float targetTemperature);
+
+    /**
+     * @brief Sets the target humidity of the climate chamber. The climate chamber is adjusted to this value when startExecution is called.
+     * @param targetTemperature temperature to set.
+     * @return true if temperature is in the acceptance range, else return 0.
+     */
+    bool setTargetHumidity(float targetHumidity);
+
+    /**
+     * @brief Starts the execution of the climate chamber, which the values set by setTargetTemperature and setTargetHumidity.
+     *        Caution: This function works only if the "external mode" was enabled on the climate chamber.
+     * @return true if execution could be started successfully, else return false. The error code can be retrieved by calling getErrorCode().
+     */
+    bool startExecution();
+
+    /**
+     * @brief Stops the execution of the climate chamber.
+     * @return true if command could be executed successfully.
+     */
+    bool stopExecution();
+
+    /**
+     * @brief Starts a predefined program (stored on the climate chamber), identified by an ID.
+     * @return true if execution was successful, else return false.
+     */
+    bool startProgram(int StartProgram);
+
+    /**
+     * @brief Stops the execution of the program.
+     * @return true if command could be processed successfully, else return false.
+     */
+    bool stopProgram();
+
+    /**
+     * @brief Retrieves the last error from the climate chamber.
+     * @param errCodeRet variable stores the retrieved error code.
+     * @return true if command could be processed, else return false.
+     */
+    bool getErrorCode(int *errCodeRet);
+
+    /**
+     * @brief Acknowledge all errors on the climate chamber.
+     * @return true if command could be processed, else return false.
+     */
+    bool acknowledgeErrors();
+
+    /**
+     * @brief Starts a thread, which continuously calls retrieveClimateChamberStatus() to retrieve temperature and humidity information from the climate chamber.
+     *        This function must be executed prior registering a callback function to retrieve humidity and temperature values.
+     * @param intervalMs interval in milliseconds after which the humidity and temperature is refreshed.
+     * @return true if thread could be started successfully, else return false.
+     */
+    bool startMonitorThread(int intervalMs = 5000);
+
+    /**
+     * @brief Stops the monitor thread which continuously retrieves humidity and temperature data from the climate chamber.
+     * @return true if the thread could be stopped successfully.
+     */
+    bool stopMonitorThread();
+
+    /**
+     * @brief Register callback function to retrieve changes in humidity and temperature values.
+     * @param callbackFunc function which is called if the humidity or temperature changes.
+     * @return true if registration was successful, else return false.
+     */
+    void registerHumidityTemperatureCallback(void (*callbackFunc)(float humidity, float temperature));
+
+    /**
+     * @brief Function returns if the climate chamber is currently running or not.
+     * @return true if temperature chamber is active.
+     */
+    [[nodiscard]] bool isRunning() const { return m_Running; }
+
+private:
+    /** Flag indicates if the climate chamber is initialized. **/
+    bool m_Initialized{};
+    /** Flag indicates if the climate chamber is running.  **/
+    bool m_Running{};
+
+    /** Channel of the climate chamber. Allowed are values from 0 - 32 (default: 1)*/
+    uint8_t m_channel = 1;
+
+    int m_MonitoringThreadInterval = DEFAULT_TIMEOUT;
+
+    /** Target temperature which is approximated after starting the chamber.
+     *  A test can be started when the target temperature == the current temperature. */
+    float m_TargetTemperature{};
+    /** Target humidity which is approximated after starting the chamber.
+     *  A test can be started when the target humidity == the current humidity. */
+    float m_TargetHumidity{};
+
+    /** Current temperature within the climate chamber. */
+    float m_CurrentTemperature{};
+    /** Current humidity within the climate chamber. */
+    float m_CurrentHumidity{};
+
+    /** Socket to connect with the climate chamber. */
+    PIL::Socket *m_socket{};
+
+    /** Thread object used for the asynchronous transfer of humidity and temperature values from the climate chamber. */
+    std::thread *m_MonitorThread{};
+    /**
+     * Monitor object to synchronize the access of the current temperature value
+     * from the continuous thread and the GetTemperature and GetHumidity methods.
+     */
+    std::mutex m_TemperatureLock;
+    /**
+     * Monitor object to synchronize the access of the current temperature value
+     * from the continuous thread and the GetTemperature and GetHumidity methods.
+    */
+    std::mutex m_HumidityLock;
+
+    static PIL::Logging m_Logger;
+
+    /**
+     * @brief Callback function is called from the monitor thread if either the humidity or the temperature changes.
+     *        Caution: Do not define blocking functions or functions with a high amount of computing time.
+     *        This would delay the execution of the monitor thread.
+     * @param humidity
+     * @param temperature
+     * @return
+     */
+    void (*m_tempHumCallback)(float humidity, float temperature) = nullptr;
+
+    /**
+     * @brief Enum contains all possible response values, which can be returned from the climate chamber.
+     */
+    enum CommandReturnValues
+    {
+        /** Target temperature of the next test execution. */
+        TARGET_TEMPERATURE,
+        /** Current temperature within the climate chamber. */
+        CURRENT_TEMPERATURE,
+        /** Target humidity of the next test execution. */
+        TARGET_HUMIDITY,
+        /** Current humidity within the climate chamber.
+         *  When climate chamber is inactive only 0 is returned. */
+        CURRENT_HUMIDTY,
+        /** Return value of the GET_TEMPERATURE_HUMIDITY command. */
+        ACK_TEMPERATURE_HUMIDITY,
+        /** Error code returned by the GET_ERROR command. */
+        COMMAND_ERR_CODE,
+        /** Return value of the ACKNOWLEDGE_ERRORS command. */
+        COMMAND_ERROR_ACK,
+        /** Return value of the START_PROGRAM command. */
+        COMMAND_START_PROGRAM_RET,
+        COMMAND_STOP_PROGRAM_RET
+
+    };
+
+    /**
+     * @brief
+     * @param parsedCommand
+     * @return
+     */
+    bool
+    sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand, ClimateChamberCommand command, int nrArgs, ...);
+
+    /**
+     * @brief
+     * @param ptr
+     * @return
+     */
+    static int monitorThreadFunction(void *ptr);
+
+    static bool
+    commandCreator(uint8_t *buffer, uint32_t *bufferLen, ClimateChamberCommand climateChamberCommand, uint16_t channel,
+                   int numberArguments, ...);
+
+    static bool commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
+                              std::map<CommandReturnValues, std::string> *parsedCommand);
+
+
+    bool startStopExecution(int command);
+
+    static bool logMessageAndReturn(bool returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
+
+
+};
