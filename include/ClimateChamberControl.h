@@ -156,7 +156,7 @@ public:
      * @brief Function returns if the climate chamber is currently running or not.
      * @return true if temperature chamber is active.
      */
-    [[nodiscard]] bool IsRunning() const { return m_Running; }
+    [[nodiscard]] bool isRunning() const { return m_Running; }
 
 private:
     /** Flag indicates if the climate chamber is initialized. **/
