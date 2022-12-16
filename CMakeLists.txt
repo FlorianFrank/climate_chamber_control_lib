@@ -10,6 +10,7 @@ if(NOT INSTALL_DIR)
 endif() # if not BUILD_DIR
 
 add_subdirectory(common_tools_lib)
+add_subdirectory(python_interface)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wpedantic")
