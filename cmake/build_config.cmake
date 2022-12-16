@@ -9,3 +9,4 @@ option(PIL_SHARED           "BUILD PIL as shared library" OFF)
 option(PIL_STATIC           "BUILD PIL as static library" ON)
 option(PIL_CXX              "Enable PIL C++ support"      ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)

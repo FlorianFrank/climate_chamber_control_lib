@@ -2,9 +2,8 @@
 
 mkdir -p tmp
 pushd tmp
-cmake .. -DINSTALL_DIR=$PWD/../Build
+cmake .. -DINSTALL_DIR=$PWD/../bin
 make
-mkdir -p ../bin
 make install
 popd
 
