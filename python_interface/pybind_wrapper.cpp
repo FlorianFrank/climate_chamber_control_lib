@@ -8,6 +8,7 @@ namespace  py = pybind11;
 PYBIND11_MODULE(py_climate_chamber_lib, m) {
 
     class_<ClimateChamberControl>(m, "ClimateChamberControl")
+            .def(pybind11::init<>())
             .def("initialize", &ClimateChamberControl::initialize)
             .def("deinitialize", &ClimateChamberControl::deInitialize)
             .def("retrieve_climate_chamber_status", &ClimateChamberControl::retrieveClimateChamberStatus)
