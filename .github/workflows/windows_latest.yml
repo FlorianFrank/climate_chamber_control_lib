@@ -1,0 +1,73 @@
+name: windows_latest
+
+on: [push]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            name: "Windows Latest MinGW",
+            os: windows-latest,
+            artifact: "windows_mingw.7z",
+            build_type: "Release",
+            cc: "gcc",
+            cxx: "g++",
+            archiver: "7z a",
+            generators: "Ninja"
+          }
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Ninja Windows
+        if: matrix.config.os == 'windows-latest'
+        uses: ashutoshvarma/setup-ninja@master
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake Windows
+        if: matrix.config.os == 'windows-latest'
+        uses: ashutoshvarma/action-cmake-build@master
+        with:
+          build-dir: ${{ runner.workspace }}/build
+          cc: ${{ matrix.config.cc }}
+          cxx: ${{ matrix.config.cxx }}
+          configure-options: -G Ninja
+          build-type: Release
+
+      - name: Build project
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build . --config ${{ matrix.config.build_type }} --target all
+
+      - name: Execute tests
+        if: matrix.config.os != 'windows-latest'
+        working-directory: ${{runner.workspace}}/build
+        run: GTEST_OUTPUT=xml:test-results/ GTEST_COLOR=1 ctest -V
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test_results_xml
+          path: ${{runner.workspace}}/build/test-results/**/*.xml
+
+      - name: Upload python lib Windows
+        if: matrix.config.os == 'windows-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: py_climate_chamber_lib.pyd
+          path: ${{ runner.workspace }}/build/python_interface/py_climate_chamber_lib*.pyd

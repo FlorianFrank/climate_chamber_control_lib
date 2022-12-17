@@ -4,6 +4,17 @@ This project provides a library to control a Weisstechnik LabEvent climate chamb
 It allows to set the humidity and temperature, receive error messages and warnings and acknowledge them. 
 The current temperature and humidity can be received by a callback function.
 
+## Continuous integration
+
+We maintain the compatibility with different compilers and operating systems by compiling the libary 
+on different systems. The current status of the continuous integration can be found here:
+
+|       OS       |                                                          Status                                                          | 
+|:--------------:|:------------------------------------------------------------------------------------------------------------------------:|
+|Windows Latest  | ![Windows latest](https://github.com/FlorianFrank/instrument_control_lib/actions/workflows/windows_latest.yml/badge.svg) |
+|Mac OS Latest   |  ![MAC OS latest](https://github.com/FlorianFrank/instrument_control_lib/actions/workflows/mac_os_latest.yml/badge.svg)  |
+|Ubuntu Latest   |  ![Ubuntu Latest](https://github.com/FlorianFrank/instrument_control_lib/actions/workflows/ubuntu_latest.yml/badge.svg)  |
+
 ## 1. Installation
 
 Download the latest release on GitHub or clone the repository and compile it by your self. 
