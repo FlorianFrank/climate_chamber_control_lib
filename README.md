@@ -42,6 +42,7 @@ test application is installed in the **bin** folder and has the following struct
 │   └─── 📂 lib
 │   │    │  📜 climate_chamber_lib
 │   │    │  📜 common_tools_lib
+│   │    │  📜 py_climate_chamber_lib
 │   └─── 📂 bin
 │   │     |  📜 ClimateChamberTest.exe
 │   └─── 📂 include
