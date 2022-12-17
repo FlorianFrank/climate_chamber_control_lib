@@ -26,6 +26,7 @@ Download the latest release on GitHub or clone the repository and compile it by 
 - CMAKE
 - make (Linux)
 - Ninja (Windows)
+- MinGW (Windows)
 
 #### On Linux
 ```bash
