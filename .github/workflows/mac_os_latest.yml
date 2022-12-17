@@ -64,4 +64,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: py_climate_chamber_lib.so
-          path: ${{runner.workspace}}/build/python_interface/ py_climate_chamber_lib*.so
+          path: ${{runner.workspace}}/build/python_interface/py_climate_chamber_lib*.so
