@@ -21,13 +21,15 @@ Download the latest release on GitHub or clone the repository and compile it by 
 #### On Linux
 ```bash
 git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
+git submodule update --init --recursive
 ./compile.sh
 ```
 
 #### On Windows
 ```bash
 git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
-./compile.ps
+git submodule update --init --recursive
+./compile.ps1
 ```
 
 By running **compile.sh** or **compile.ps** the library, a test application as well as the underlying abstraction library 
@@ -40,6 +42,7 @@ test application is installed in the **bin** folder and has the following struct
 │   └─── 📂 lib
 │   │    │  📜 climate_chamber_lib
 │   │    │  📜 common_tools_lib
+│   │    │  📜 py_climate_chamber_lib
 │   └─── 📂 bin
 │   │     |  📜 ClimateChamberTest.exe
 │   └─── 📂 include

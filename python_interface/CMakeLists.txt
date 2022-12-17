@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.0)
 project(py_climate_chamber_lib CXX)
 
 
-set(PYTHON_LIBRARY_DIR "/home/florianfrank/anaconda3/envs/Python38/lib/python3.6/site-packages")
-set(PYTHON_EXECUTABLE "/home/florianfrank/anaconda3/envs/Python38/bin/python3")
-set(Python_ROOT_DIR "/home/florianfrank/anaconda3/envs/Python38")
+#set(PYTHON_LIBRARY_DIR "/home/florianfrank/anaconda3/envs/Python38/lib/python3.6/site-packages")
+#set(PYTHON_EXECUTABLE "/home/florianfrank/anaconda3/envs/Python38/bin/python3")
+#set(Python_ROOT_DIR "/home/florianfrank/anaconda3/envs/Python38")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(pybind11)
@@ -18,3 +18,8 @@ target_include_directories(py_climate_chamber_lib PRIVATE   ${CMAKE_CURRENT_SOUR
                                                             ${CMAKE_CURRENT_SOURCE_DIR}/../common_tools_lib/Logger/include)
 
 target_link_libraries(py_climate_chamber_lib PRIVATE climate_chamber_lib)
+
+install(TARGETS py_climate_chamber_lib
+        ARCHIVE DESTINATION "${INSTALL_DIR}/lib"
+        LIBRARY DESTINATION "${INSTALL_DIR}/lib"
+        RUNTIME DESTINATION "${INSTALL_DIR}/bin")
