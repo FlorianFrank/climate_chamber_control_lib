@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.15)
 
 include(cmake/build_config.cmake)
 add_definitions(-DCXX=1)
+set (CMAKE_CXX_STANDARD 11)
+
 
 project(climate_chamber_lib VERSION 1.0.0)
 
