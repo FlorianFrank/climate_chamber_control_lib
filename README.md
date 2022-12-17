@@ -21,13 +21,15 @@ Download the latest release on GitHub or clone the repository and compile it by 
 #### On Linux
 ```bash
 git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
+git submodule update --init --recursive
 ./compile.sh
 ```
 
 #### On Windows
 ```bash
 git clone git@github.com:FlorianFrank/climate_chamber_control_lib.git
-./compile.ps
+git submodule update --init --recursive
+./compile.ps1
 ```
 
 By running **compile.sh** or **compile.ps** the library, a test application as well as the underlying abstraction library 
