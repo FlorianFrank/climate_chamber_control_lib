@@ -7,6 +7,7 @@
 #include <Util.h>
 #include "ctlib/Socket.hpp"
 #include "ctlib/Logging.hpp"
+#include "CommandParser.h"
 
 
 #include <cstdint>
@@ -35,6 +36,7 @@ volatile bool threadRunning = false;
 ClimateChamberControl::ClimateChamberControl(): m_Logger(DEBUG_LVL, nullptr){
     m_Util = new Util;
     m_CommandCreator = new CommandCreator(m_Util);
+    m_CommandParser = new CommandParser(m_Util);
 }
 
 ClimateChamberControl::~ClimateChamberControl()
@@ -84,17 +86,17 @@ PIL_ERROR_CODE ClimateChamberControl::retrieveClimateChamberStatus()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call retrieveClimateChamberStatus");
 
-    std::map<CommandReturnValues, std::string> parsedCommand;
+    std::map<CommandParser::CommandReturnValues, std::string> parsedCommand;
     auto errCode = sendCommandGetResponse(&parsedCommand, GET_TEMPERATURE_HUMIDITY, 0);
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
     m_TemperatureLock.lock();
-    m_CurrentTemperature = std::stof(parsedCommand.find(CURRENT_TEMPERATURE)->second);
+    m_CurrentTemperature = std::stof(parsedCommand.find(CommandParser::CURRENT_TEMPERATURE)->second);
     m_TemperatureLock.unlock();
 
     m_HumidityLock.lock();
-    m_CurrentHumidity = std::stof(parsedCommand.find(CURRENT_HUMIDTY)->second);
+    m_CurrentHumidity = std::stof(parsedCommand.find(CommandParser::CURRENT_HUMIDTY)->second);
     m_HumidityLock.unlock();
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
@@ -215,12 +217,12 @@ PIL_ERROR_CODE ClimateChamberControl::startProgram(const int programID)
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call startProgram");
 
-    std::map<CommandReturnValues, std::string> parsedCommand;
+    std::map<CommandParser::CommandReturnValues, std::string> parsedCommand;
     auto errCode = sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, programID);
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = std::stoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second);
+    int ret = std::stoi(parsedCommand.find(CommandParser::COMMAND_START_PROGRAM_RET)->second);
     if (ret != 0) // TODO what is ret 0, use explicit error code enums
         return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Start program %d returns with error code %d", programID, ret);
@@ -232,12 +234,12 @@ PIL_ERROR_CODE ClimateChamberControl::stopProgram()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call stopProgram");
 
-    std::map<CommandReturnValues, std::string> parsedCommand;
+    std::map<CommandParser::CommandReturnValues, std::string> parsedCommand;
     auto errCode = sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, 0);
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = std::stoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second);
+    int ret = std::stoi(parsedCommand.find(CommandParser::COMMAND_START_PROGRAM_RET)->second);
     if (ret != 0) // TODO what is ret != 0
         return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "Stop program returns with error code %d",
                                    0, ret);
@@ -249,12 +251,12 @@ PIL_ERROR_CODE ClimateChamberControl::acknowledgeErrors()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call acknowledgeErrors");
 
-    std::map<CommandReturnValues, std::string> parsedCommand;
+    std::map<CommandParser::CommandReturnValues, std::string> parsedCommand;
     auto errCode = sendCommandGetResponse(&parsedCommand, ACKNOWLEDGE_ERRORS, 0);
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = std::stoi(parsedCommand.find(COMMAND_ERROR_ACK)->second);
+    int ret = std::stoi(parsedCommand.find(CommandParser::COMMAND_ERROR_ACK)->second);
     if (ret != 0)
         return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "acknowledgeErrors returns error code %d",
                                    ret);
@@ -305,7 +307,7 @@ PIL_ERROR_CODE ClimateChamberControl::registerHumidityTemperatureCallback(void (
   # Private Functions.
  */
 
-PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand,
+PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandParser::CommandReturnValues, std::string> *parsedCommand,
                                                    ClimateChamberCommand command, int nrArgs, ...)
 {
     if (!m_Initialized)
@@ -377,7 +379,7 @@ int ctr = 0;
     if (ret == -1)
         m_Logger.LogMessage(ERROR_LVL, __FUNCTION__, __LINE__, "Error while calling read"); // Should we return false?
 
-    errCode = commandParser(receiveBuffer, bufferLen, command, parsedCommand);
+    errCode = m_CommandParser->parse(receiveBuffer, bufferLen, command, parsedCommand);
     if (errCode != PIL_NO_ERROR)
         return m_Util->logMessageAndReturn(errCode, ERROR_LVL, __FUNCTION__, __LINE__,
                                    "Error could not parse GET_TEMPERATURE_HUMIDITY");
@@ -423,72 +425,6 @@ int ctr = 0;
     return 0;
 }
 
-
-
-
-
-PIL_ERROR_CODE ClimateChamberControl::commandParser(const uint8_t *buffer, uint32_t bufferLen,
-                                          ClimateChamberCommand commandToParse,
-                                          std::map<ClimateChamberControl::CommandReturnValues, std::string> *parsedCommand)
-{
-    if (!buffer)
-        return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FUNCTION__, __LINE__, "Buffer == nullptr");
-
-    if (bufferLen == 0)
-        return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FUNCTION__, __LINE__, "Invalid buffer length == 0");
-
-    std::string s(reinterpret_cast<const char *>(buffer));
-    std::string::size_type prev_pos = 0, pos = 0;
-
-    switch (commandToParse)
-    {
-        case GET_TEMPERATURE_HUMIDITY:
-        {
-            int ctr = 0;
-            // Separate return value after each space
-            while ((pos = s.find(' ', pos)) != std::string::npos)
-            {
-                std::string substring(s.substr(prev_pos, pos - prev_pos));
-
-                // Add parsed value to return list. The order is equal to the order in the CommandReturnValues array
-                parsedCommand->insert(
-                        std::pair<CommandReturnValues, std::string>(static_cast<CommandReturnValues>(ctr), substring));
-                prev_pos = ++pos;
-                ctr++;
-            }
-
-            if (ctr < 4) // TODO avoid specific numbers within the code
-                return m_Util->logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
-                                           "Command parser failed %d elements returned (required 4) ", ctr);
-
-            return PIL_NO_ERROR;
-        }
-        case GET_ERROR:
-            parsedCommand->insert(
-                    std::pair<CommandReturnValues, std::string>(COMMAND_ERR_CODE, std::string((const char *) buffer)));
-            return PIL_NO_ERROR;
-        case ACKNOWLEDGE_ERRORS:
-            parsedCommand->insert(
-                    std::pair<CommandReturnValues, std::string>(COMMAND_ERROR_ACK, std::string((const char *) buffer)));
-            return PIL_NO_ERROR;
-        case SET_TEMPERATURE_HUMIDITY:
-            parsedCommand->insert(std::pair<CommandReturnValues, std::string>(ACK_TEMPERATURE_HUMIDITY,
-                                                                              std::string((const char *) buffer)));
-            return PIL_NO_ERROR;
-        case START_PROGRAM:
-            parsedCommand->insert(std::pair<CommandReturnValues, std::string>(COMMAND_START_PROGRAM_RET,
-                                                                              std::string((const char *) buffer)));
-            return PIL_NO_ERROR;
-        case STOP_PROGRAM:
-            parsedCommand->insert(std::pair<CommandReturnValues, std::string>(COMMAND_STOP_PROGRAM_RET,
-                                                                              std::string((const char *) buffer)));
-            return PIL_NO_ERROR;
-        default:
-            m_Logger.LogMessage(WARNING_LVL, __FILENAME__, __LINE__, "commandParser: Command not found -> return false");
-            return PIL_INVALID_ARGUMENTS;
-    }
-}
-
 PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
 {
     if (!m_Initialized)
@@ -513,8 +449,8 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
     memset(receiveBuffer, 0x00, 512);
     uint16_t bufferLen = 512;
     m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen));
-    std::map<ClimateChamberControl::CommandReturnValues, std::string> parsedCommandMap;
-    errCode = commandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap);
+    std::map<CommandParser::CommandReturnValues, std::string> parsedCommandMap;
+    errCode = m_CommandParser->parse(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap);
     if (errCode != PIL_NO_ERROR)
         return m_Util->logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Error could not parse SET_TEMPERATURE_HUMIDITY");

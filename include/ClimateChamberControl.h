@@ -9,7 +9,7 @@
 #include "../common_tools_lib/Logging/include/ctlib/Logging.h"
 #include "../common_tools_lib/Logging/include/ctlib/Logging.hpp"
 #include "../common_tools_lib/ErrorHandling/include/ctlib/ErrorCodeDefines.h"
-
+#include "CommandParser.h"
 
 
 #include <thread> // std::thread
@@ -211,38 +211,12 @@ private:
     void (*m_tempHumCallback)(float humidity, float temperature) = nullptr;
 
     /**
-     * @brief Enum contains all possible response values, which can be returned from the climate chamber.
-     */
-    enum CommandReturnValues
-    {
-        /** Target temperature of the next test execution. */
-        TARGET_TEMPERATURE,
-        /** Current temperature within the climate chamber. */
-        CURRENT_TEMPERATURE,
-        /** Target humidity of the next test execution. */
-        TARGET_HUMIDITY,
-        /** Current humidity within the climate chamber.
-         *  When climate chamber is inactive only 0 is returned. */
-        CURRENT_HUMIDTY,
-        /** Return value of the GET_TEMPERATURE_HUMIDITY command. */
-        ACK_TEMPERATURE_HUMIDITY,
-        /** Error code returned by the GET_ERROR command. */
-        COMMAND_ERR_CODE,
-        /** Return value of the ACKNOWLEDGE_ERRORS command. */
-        COMMAND_ERROR_ACK,
-        /** Return value of the START_PROGRAM command. */
-        COMMAND_START_PROGRAM_RET,
-        COMMAND_STOP_PROGRAM_RET
-
-    };
-
-    /**
      * @brief
      * @param parsedCommand
      * @return
      */
     PIL_ERROR_CODE
-    sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand, ClimateChamberCommand command, int nrArgs, ...);
+    sendCommandGetResponse(std::map<CommandParser::CommandReturnValues, std::string> *parsedCommand, ClimateChamberCommand command, int nrArgs, ...);
 
     /**
      * @brief
@@ -251,13 +225,11 @@ private:
      */
     static int monitorThreadFunction(void *ptr);
 
-    PIL_ERROR_CODE commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
-                              std::map<CommandReturnValues, std::string> *parsedCommand);
-
 
     PIL_ERROR_CODE startStopExecution(int command);
     PIL_ERROR_CODE establishTCPConnection(const std::string &ip, uint16_t port);
 
     Util *m_Util;
     CommandCreator *m_CommandCreator;
+    CommandParser *m_CommandParser;
 };
