@@ -83,49 +83,49 @@ ClimateChamberControl::~ClimateChamberControl()
 }
 
 
-bool ClimateChamberControl::initialize(const std::string &ipAddr, uint16_t port, uint8_t channel)
+PIL_ERROR_CODE ClimateChamberControl::initialize(const std::string &ipAddr, uint16_t port, uint8_t channel)
 {
     m_channel = channel;
 
     m_socket = new PIL::Socket(TCP, IPv4, "localhost", 8080 /*TODO what is 8080??*/, DEFAULT_TIMEOUT);
     if (m_socket->GetLastError() != PIL_NO_ERROR)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error could not create Socket (%d)",
+        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not create Socket (%d)",
                                    PIL_ErrorCodeToString(m_socket->GetLastError()));
 
     // TODO maybe split function
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ipAddr.c_str(), port);
     m_socket->Connect(const_cast<std::string &>(ipAddr), port); // TODO change underlying lib accepting const std::strings
     if (m_socket->GetLastError() != PIL_NO_ERROR)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error could not bind helperFiles (%s)",
+        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not bind helperFiles (%s)",
                                    PIL_ErrorCodeToString(m_socket->GetLastError()));
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate chamber initialized");
     m_Initialized = true;
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::deInitialize()
+PIL_ERROR_CODE ClimateChamberControl::deInitialize()
 {
     if (!m_Initialized)
         m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Nothing todo Climate Chamber not initialized yet");
 
     // Exit loop in monitor thread, to allow joining the thread.
     if (!stopMonitorThread())
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error could not stop monitor thread");
+        return logMessageAndReturn(PIL_THREAD_NOT_FOUND, ERROR_LVL, __FILENAME__, __LINE__, "Error could not stop monitor thread");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "De-initialization completed");
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::retrieveClimateChamberStatus()
+PIL_ERROR_CODE ClimateChamberControl::retrieveClimateChamberStatus()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call retrieveClimateChamberStatus");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
     if (!sendCommandGetResponse(&parsedCommand, GET_TEMPERATURE_HUMIDITY, 0))
-        return false;
+        return PIL_UNKNOWN_ERROR;
 
     // TODO atof and atoi error detection
     m_TemperatureLock.lock();
@@ -141,7 +141,7 @@ bool ClimateChamberControl::retrieveClimateChamberStatus()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
                    "Retrieve Climate Chamber values: (Current temperature: %f, Target temperature: %f, Current humidity: %f, Target humidity: %f",
                    m_CurrentTemperature, m_TargetTemperature, m_CurrentHumidity, m_TargetHumidity);
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
@@ -167,11 +167,11 @@ float ClimateChamberControl::getCurrentTemperature()
 float ClimateChamberControl::getCurrentHumidity()
 {
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
          // TODO zero is misleading! Adjust return type
 
     if (!m_Running)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__,
                                    "The humidity can only be retrieved when the climate chamber is running");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Get current humidity: %d", m_CurrentHumidity);
@@ -207,10 +207,10 @@ float ClimateChamberControl::getTargetHumidity()
 }
 
 
-bool ClimateChamberControl::setTargetTemperature(const float targetTemperature)
+PIL_ERROR_CODE ClimateChamberControl::setTargetTemperature(const float targetTemperature)
 {
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Set target temperature %f", targetTemperature);
 
@@ -218,17 +218,17 @@ bool ClimateChamberControl::setTargetTemperature(const float targetTemperature)
     m_TargetTemperature = targetTemperature;
     m_TemperatureLock.unlock();
 
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::setTargetHumidity(const float targetHumidity)
+PIL_ERROR_CODE ClimateChamberControl::setTargetHumidity(const float targetHumidity)
 {
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
 
     if (targetHumidity > MAX_HUMIDITY) // TODO this actually follows a function, e.g. at lower temperatures only lower humidity values are allowed
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                    "Could not set humidity %d only values from [0,100] are allowed");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Set target humidity %f", targetHumidity);
@@ -237,23 +237,23 @@ bool ClimateChamberControl::setTargetHumidity(const float targetHumidity)
     m_TargetHumidity = targetHumidity;
     m_HumidityLock.unlock();
 
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::startExecution()
+PIL_ERROR_CODE ClimateChamberControl::startExecution()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
                    "Start climate chamber execution with values: (temperature: %f, humidity: %f)", m_TargetTemperature,
                    m_TargetHumidity);
     if (!startStopExecution(100)) // TODO what is command 100 don't use magic numbers
-        return false;
+        return PIL_UNKNOWN_ERROR;
     m_Running = true;
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::stopExecution()
+PIL_ERROR_CODE ClimateChamberControl::stopExecution()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Stop climate chamber execution");
 
@@ -262,91 +262,75 @@ bool ClimateChamberControl::stopExecution()
     return startStopExecution(0); // TODO what is command 0 don't use magic numbers
 }
 
-bool ClimateChamberControl::startProgram(const int programID)
+PIL_ERROR_CODE ClimateChamberControl::startProgram(const int programID)
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call startProgram");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
     if (!sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, programID))
-        return false;
+        return PIL_UNKNOWN_ERROR;
 
     int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
     if (ret != 0) // TODO what is ret 0, use explicit error code enums
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Start program %d returns with error code %d", programID, ret);
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::stopProgram()
+PIL_ERROR_CODE ClimateChamberControl::stopProgram()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call stopProgram");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
     if (!sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, 0))
-        return false;
+        return PIL_UNKNOWN_ERROR;
 
     int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
     if (ret != 0) // TODO what is ret != 0
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Stop program returns with error code %d",
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "Stop program returns with error code %d",
                                    0, ret);
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::getErrorCode(int *errCodeRet) // TODO don't use ugly int pointers
-{
-    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call getErrorCode");
-
-    std::map<CommandReturnValues, std::string> parsedCommand;
-    if (!sendCommandGetResponse(&parsedCommand, GET_ERROR, 0))
-        return false;
-
-    int ret = atoi(parsedCommand.find(COMMAND_ERR_CODE)->second.c_str());
-    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "getErrorCode returns %d", ret);
-
-    *errCodeRet = ret;
-    return true;
-}
-
-
-bool ClimateChamberControl::acknowledgeErrors()
+PIL_ERROR_CODE ClimateChamberControl::acknowledgeErrors()
 {
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call acknowledgeErrors");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
     if (!sendCommandGetResponse(&parsedCommand, ACKNOWLEDGE_ERRORS, 0))
-        return false;
+        return PIL_UNKNOWN_ERROR;
 
     int ret = atoi(parsedCommand.find(COMMAND_ERROR_ACK)->second.c_str());
     if (ret != 0)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "acknowledgeErrors returns error code %d",
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "acknowledgeErrors returns error code %d",
                                    ret);
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
-bool ClimateChamberControl::startMonitorThread(int intervalMs)
+PIL_ERROR_CODE ClimateChamberControl::startMonitorThread(int intervalMs)
 {
     if (intervalMs < 100)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                    "Monitor Thread interval of %d not allowed value must be greater 100 milliseconds"); // TODO why is this the case?
 
     m_MonitoringThreadInterval = intervalMs;
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
                         "Start monitor thread with interval %d continuously retrieves humidity and temperature information from the climate chamber",
                         m_MonitoringThreadInterval);
     m_MonitorThread = new std::thread(monitorThreadFunction, this);
-    return true;
+    return PIL_NO_ERROR;
 }
 
-bool ClimateChamberControl::stopMonitorThread()
+PIL_ERROR_CODE ClimateChamberControl::stopMonitorThread()
 {
     if (!threadRunning)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "No monitoring thread running");
+        return logMessageAndReturn(PIL_THREAD_NOT_FOUND, WARNING_LVL, __FILENAME__, __LINE__, "No monitoring thread running");
 
     threadRunning = false;
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Join thread");
@@ -354,10 +338,10 @@ bool ClimateChamberControl::stopMonitorThread()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Thread exited");
     delete m_MonitorThread;
 
-    return true;
+    return PIL_NO_ERROR;
 }
 
-void ClimateChamberControl::registerHumidityTemperatureCallback(void (*callbackFunc)(float, float))
+PIL_ERROR_CODE ClimateChamberControl::registerHumidityTemperatureCallback(void (*callbackFunc)(float, float))
 {
     if (threadRunning && m_Running)
         m_Logger.LogMessage(WARNING_LVL, __FILENAME__, __LINE__,
@@ -371,14 +355,14 @@ void ClimateChamberControl::registerHumidityTemperatureCallback(void (*callbackF
   # Private Functions.
  */
 
-bool ClimateChamberControl::sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand,
+PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand,
                                                    ClimateChamberCommand command, int nrArgs, ...)
 {
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
 
     if (!parsedCommand)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Map required to store the return values is NULL");
 
     /**
@@ -394,7 +378,7 @@ bool ClimateChamberControl::sendCommandGetResponse(std::map<CommandReturnValues,
     if (!commandCreator(commandBuffer, &commandBufferSize, command, m_channel, nrArgs, vaList))
     {
         va_end(vaList); // TODO isn't there a way to clean it up automatically after leaving the scope of the function
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
+        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
     }
 
     va_end(vaList);
@@ -402,7 +386,7 @@ bool ClimateChamberControl::sendCommandGetResponse(std::map<CommandReturnValues,
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "RetrieveClimateChamber status => send: \n[%s])", commandBuffer);
     m_socket->Send(commandBuffer, reinterpret_cast<int*>(&commandBufferSize)); // TODO cleanup
     if (m_socket->GetLastError() != PIL_NO_ERROR)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
+        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
 
     /**
      * RECEIVE RESPONSE.
@@ -425,7 +409,7 @@ int ctr = 0;
             { // TODO what the hell is that?
                 m_Logger.LogMessage(WARNING_LVL, __FUNCTION__, __LINE__, "No data available within 5 seconds");
 
-                return false;
+                return PIL_INVALID_ARGUMENTS;
             }
         }
         ctr++;
@@ -442,21 +426,21 @@ int ctr = 0;
         m_Logger.LogMessage(ERROR_LVL, __FUNCTION__, __LINE__, "Error while calling read"); // Should we return false?
 
     if (!commandParser(receiveBuffer, bufferLen, command, parsedCommand))
-        return logMessageAndReturn(false, ERROR_LVL, __FUNCTION__, __LINE__,
+        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FUNCTION__, __LINE__,
                                    "Error could not parse GET_TEMPERATURE_HUMIDITY");
 
-    return true;
+    return PIL_NO_ERROR;
 }
 
 
 /*static*/ int ClimateChamberControl::monitorThreadFunction(void *ptr)
 {
     if (threadRunning)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, __FILENAME__,
+        return logMessageAndReturn(PIL_THREAD_NOT_FOUND, WARNING_LVL, __FILENAME__, __LINE__, __FILENAME__,
                                    "Monitor thread still running -> exit thread"); // TODO change return type
 
     if (!ptr)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, __FILENAME__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, __FILENAME__,
                                    "No valid ClimateChamberWrapper object passed to the monitor thread -> exit thread");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "startMonitorThread");
@@ -487,19 +471,19 @@ int ctr = 0;
 }
 
 
-/*static*/ bool ClimateChamberControl::commandCreator(uint8_t *buffer, uint32_t *bufferLen,
+/*static*/ PIL_ERROR_CODE ClimateChamberControl::commandCreator(uint8_t *buffer, uint32_t *bufferLen,
                                                       ClimateChamberCommand climateChamberCommand,
                                                       uint16_t channel, int numberArguments, ...)
 {
     if (!buffer)
-        return logMessageAndReturn(false, ERROR_LVL, __FUNCTION__, __LINE__, "Buffer == nullptr");
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FUNCTION__, __LINE__, "Buffer == nullptr");
 
     if (*bufferLen < 5) // TODO what is 5?
-        return logMessageAndReturn(false, WARNING_LVL, __FUNCTION__, __LINE__,
+        return logMessageAndReturn(PIL_INSUFFICIENT_RESOURCES, WARNING_LVL, __FUNCTION__, __LINE__,
                                    "CommandBuffer must be at least 5 byte long, but bufferLen is %d", *bufferLen);
 
     if (channel > MAX_CHANNEL)
-        return logMessageAndReturn(false, WARNING_LVL, __FUNCTION__, __LINE__,
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FUNCTION__, __LINE__,
                                    "Invalid channelID %d, allowed values: [0,31]", channel);
 
     // Commands always start with $
@@ -507,7 +491,7 @@ int ctr = 0;
 
     // ChannelID must bet between 0 and 32, default is 1
     if (sprintf(reinterpret_cast<char *>(&buffer[1]), "%02d", channel) < 0)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error while calling sprintf");
+        return logMessageAndReturn(PIL_ERRNO, ERROR_LVL, __FILENAME__, __LINE__, "Error while calling sprintf");
 
     switch (climateChamberCommand)
     {
@@ -516,19 +500,19 @@ int ctr = 0;
             buffer[3] = 'I';
             buffer[4] = '\r';
             *bufferLen = 5;
-            return true;
+            return PIL_NO_ERROR;
         case SET_TEMPERATURE_HUMIDITY:
         {
             // ASCII command $<channelByte1><channelByte0>E <targetTemperature> <targetHumidity> <StartStop> <additional flags (not used)>\r
             // e.g. $01E 0010.0 0080.0 0100.0 0000.0 0000.0 0000.0 0000.0 010 00000001010000000000000000000\r
 
             if (*bufferLen < 81) // TODO what is 81 avoid magic numbers
-                return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INSUFFICIENT_RESOURCES, ERROR_LVL, __FILENAME__, __LINE__,
                                            "Error buffer size to short to send set temperature/humidity command required: %d, actual: %d",
                                            81, *bufferLen);
 
             if (numberArguments < 3)
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "SET_TEMPERATURE_HUMIDITY requires three arguments %d were given",
                                            numberArguments);
 
@@ -540,11 +524,11 @@ int ctr = 0;
             va_end(ap);
 
             if (temperature < MIN_TEMPERATURE || temperature > MAX_TEMPERATURE)
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "Error temperature value %d not allowed. (Allowed: [0,100].");
 
             if (humidity < MIN_HUMIDITY || humidity > MAX_HUMIDITY)
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "Error humidity value %d not allowed. (Allowed: [0,100].");
 
             buffer[3] = 'E';
@@ -554,29 +538,29 @@ int ctr = 0;
                                      temperature, humidity, time);
             *bufferLen = sprintfRet + 5;
             if (sprintfRet < 0)
-                return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error while calling sprintf");
-            return true;
+                return logMessageAndReturn(PIL_ERRNO, ERROR_LVL, __FILENAME__, __LINE__, "Error while calling sprintf");
+            return PIL_NO_ERROR;
         }
         case GET_ERROR:
             buffer[3] = 'F';
             buffer[4] = '\r';
             *bufferLen = 5;
-            return true;
+            return PIL_NO_ERROR;
         case ACKNOWLEDGE_ERRORS:
             buffer[3] = 'Q';
             buffer[4] = '\r';
             *bufferLen = 5;
-            return true;
+            return PIL_NO_ERROR;
         case START_PROGRAM:
         {
             if (*bufferLen < 8) // TODO avoid specific numbers within the source code.
-                return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INSUFFICIENT_RESOURCES, ERROR_LVL, __FILENAME__, __LINE__,
                                            "Error buffer size to short to send set temperature/humidity command required: %d, actual: %d",
                                            8, *bufferLen);
 
 
             if (numberArguments < 1)
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "START_PROGRAM requires one argument (program number) but only %d were given",
                                            numberArguments);
 
@@ -586,7 +570,7 @@ int ctr = 0;
             va_end(ap);
 
             if (programID > MAX_PROGRAM_ID || programID < MIN_PROGRAM_ID)
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "Program id %d not accepted (allowed: [0,9999]", programID);
 
             buffer[3] = 'P';
@@ -595,11 +579,11 @@ int ctr = 0;
 
             buffer[8] = '\r';
             *bufferLen = 8;
-            return true;
+            return PIL_NO_ERROR;
         }
         case STOP_PROGRAM:
             if (*bufferLen < 8)
-                return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INSUFFICIENT_RESOURCES, ERROR_LVL, __FILENAME__, __LINE__,
                                            "Error buffer size to short to send set temperature/humidity command required: %d, actual: %d",
                                            8, *bufferLen);
 
@@ -610,21 +594,21 @@ int ctr = 0;
             buffer[7] = '0';
             buffer[8] = '\r';
             *bufferLen = 8;
-            return true;
+            return PIL_NO_ERROR;
     }
-    return false;
+    return PIL_INVALID_ARGUMENTS;
 }
 
 
-bool ClimateChamberControl::commandParser(const uint8_t *buffer, uint32_t bufferLen,
+PIL_ERROR_CODE ClimateChamberControl::commandParser(const uint8_t *buffer, uint32_t bufferLen,
                                           ClimateChamberCommand commandToParse,
                                           std::map<ClimateChamberControl::CommandReturnValues, std::string> *parsedCommand)
 {
     if (!buffer)
-        return logMessageAndReturn(false, ERROR_LVL, __FUNCTION__, __LINE__, "Buffer == nullptr");
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FUNCTION__, __LINE__, "Buffer == nullptr");
 
     if (bufferLen == 0)
-        return logMessageAndReturn(false, ERROR_LVL, __FUNCTION__, __LINE__, "Invalid buffer length == 0");
+        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FUNCTION__, __LINE__, "Invalid buffer length == 0");
 
     std::string s(reinterpret_cast<const char *>(buffer));
     std::string::size_type prev_pos = 0, pos = 0;
@@ -647,41 +631,41 @@ bool ClimateChamberControl::commandParser(const uint8_t *buffer, uint32_t buffer
             }
 
             if (ctr < 4) // TODO avoid specific numbers within the code
-                return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__,
+                return logMessageAndReturn(PIL_INVALID_ARGUMENTS, WARNING_LVL, __FILENAME__, __LINE__,
                                            "Command parser failed %d elements returned (required 4) ", ctr);
 
-            return true;
+            return PIL_NO_ERROR;
         }
         case GET_ERROR:
             parsedCommand->insert(
                     std::pair<CommandReturnValues, std::string>(COMMAND_ERR_CODE, std::string((const char *) buffer)));
-            return true;
+            return PIL_NO_ERROR;
         case ACKNOWLEDGE_ERRORS:
             parsedCommand->insert(
                     std::pair<CommandReturnValues, std::string>(COMMAND_ERROR_ACK, std::string((const char *) buffer)));
-            return true;
+            return PIL_NO_ERROR;
         case SET_TEMPERATURE_HUMIDITY:
             parsedCommand->insert(std::pair<CommandReturnValues, std::string>(ACK_TEMPERATURE_HUMIDITY,
                                                                               std::string((const char *) buffer)));
-            return true;
+            return PIL_NO_ERROR;
         case START_PROGRAM:
             parsedCommand->insert(std::pair<CommandReturnValues, std::string>(COMMAND_START_PROGRAM_RET,
                                                                               std::string((const char *) buffer)));
-            return true;
+            return PIL_NO_ERROR;
         case STOP_PROGRAM:
             parsedCommand->insert(std::pair<CommandReturnValues, std::string>(COMMAND_STOP_PROGRAM_RET,
                                                                               std::string((const char *) buffer)));
-            return true;
+            return PIL_NO_ERROR;
         default:
             m_Logger.LogMessage(WARNING_LVL, __FILENAME__, __LINE__, "commandParser: Command not found -> return false");
-            return false;
+            return PIL_INVALID_ARGUMENTS;
     }
 }
 
-bool ClimateChamberControl::startStopExecution(int command)
+PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
 {
     if (!m_Initialized)
-        return logMessageAndReturn(false, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
 
     uint8_t commandBuffer[128];
     uint32_t commandBufferSize = 128;
@@ -689,13 +673,13 @@ bool ClimateChamberControl::startStopExecution(int command)
                         m_TargetHumidity, command))
     {
         m_Logger.LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
-        return false;
+        return PIL_UNKNOWN_ERROR;
     }
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Send command %s", commandBuffer);
     m_socket->Send(commandBuffer, reinterpret_cast<int*>(&commandBufferSize));
     if (m_socket->GetLastError() != PIL_NO_ERROR)
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
+        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not send message");
 
     uint8_t receiveBuffer[512];
     memset(receiveBuffer, 0x00, 512);
@@ -703,17 +687,17 @@ bool ClimateChamberControl::startStopExecution(int command)
     m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen)); // TODO
     std::map<ClimateChamberControl::CommandReturnValues, std::string> parsedCommandMap;
     if (!commandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap))
-        return logMessageAndReturn(false, ERROR_LVL, __FILENAME__, __LINE__,
+        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Error could not parse SET_TEMPERATURE_HUMIDITY");
 
     /* m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate Chamber is started with target temperature: %d, "
                                                        "target humidity: %d (Command: %s)", m_TargetTemperature,
                     m_TargetHumidity, commandBuffer);*/
     m_Running = true;
-    return true;
+    return PIL_NO_ERROR;
 }
 
-/*static*/ bool ClimateChamberControl::logMessageAndReturn(bool returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...)
+/*static*/ PIL_ERROR_CODE ClimateChamberControl::logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...)
 {
     va_list vaList;
     va_start(vaList, message);
