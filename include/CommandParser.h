@@ -9,6 +9,7 @@
 #include "ctlib/ErrorCodeDefines.h"
 
 #include <map>
+#include <string>
 
 class Util;
 
