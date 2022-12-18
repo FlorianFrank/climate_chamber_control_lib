@@ -24,10 +24,6 @@ int main()
     printf("Current humidity %f\n", climateChamberWrapper.getCurrentHumidity());
     printf("Current temperature %f\n", climateChamberWrapper.getCurrentTemperature());
 
-    int errCode;
-    climateChamberWrapper.getErrorCode(&errCode);
-    printf("Receive error code %d\n", errCode);
-
     climateChamberWrapper.acknowledgeErrors();
 }
 

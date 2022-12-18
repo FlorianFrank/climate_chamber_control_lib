@@ -8,6 +8,7 @@
 #include "ClimateChamberDefines.h"
 #include "../common_tools_lib/Logging/include/ctlib/Logging.h"
 #include "../common_tools_lib/Logging/include/ctlib/Logging.hpp"
+#include "../common_tools_lib/ErrorHandling/include/ctlib/ErrorCodeDefines.h"
 
 
 #include <thread> // std::thread
@@ -39,21 +40,21 @@ public:
      * @param channel TODO requires further explanation and checks
      * @return if successful return true, else false is returned.
      */
-    bool initialize(const std::string &ipAddr, uint16_t port = DEFAULT_PORT, uint8_t channel = DEFAULT_CHANNEL); // TODO what does this channel mean??
+    PIL_ERROR_CODE initialize(const std::string &ipAddr, uint16_t port = DEFAULT_PORT, uint8_t channel = DEFAULT_CHANNEL); // TODO what does this channel mean??
 
     /**
      * @brief Closes the socket to the climate chamber. Joins the thread, which continuously
      *        fetches humidity and temperature data from the climate chamber.
      * @return if successful return true, else false is returned.
      */
-    bool deInitialize();
+    PIL_ERROR_CODE deInitialize();
 
     /**
      * @brief Retrieves the current temperature, the target temperature, the current humidity, such as the target humidity from the climate chamber.
      *          The values are stored as member variables in this class and can be accessed by calling getCurrentHumidity, getTargetTemperature, etc.
      * @return if successful return true, else false is returned.
      */
-    bool retrieveClimateChamberStatus();
+    PIL_ERROR_CODE retrieveClimateChamberStatus();
 
     /**
      * @brief Returns the last received current temperature value of the climate chamber.
@@ -84,52 +85,46 @@ public:
      * @param targetTemperature temperature to set.
      * @return true if temperature is in the acceptance range, else return 0.
      */
-    bool setTargetTemperature(float targetTemperature);
+    PIL_ERROR_CODE setTargetTemperature(float targetTemperature);
 
     /**
      * @brief Sets the target humidity of the climate chamber. The climate chamber is adjusted to this value when startExecution is called.
      * @param targetTemperature temperature to set.
      * @return true if temperature is in the acceptance range, else return 0.
      */
-    bool setTargetHumidity(float targetHumidity);
+    PIL_ERROR_CODE setTargetHumidity(float targetHumidity);
 
     /**
      * @brief Starts the execution of the climate chamber, which the values set by setTargetTemperature and setTargetHumidity.
      *        Caution: This function works only if the "external mode" was enabled on the climate chamber.
      * @return true if execution could be started successfully, else return false. The error code can be retrieved by calling getErrorCode().
      */
-    bool startExecution();
+    PIL_ERROR_CODE startExecution();
 
     /**
      * @brief Stops the execution of the climate chamber.
      * @return true if command could be executed successfully.
      */
-    bool stopExecution();
+    PIL_ERROR_CODE stopExecution();
 
     /**
      * @brief Starts a predefined program (stored on the climate chamber), identified by an ID.
      * @return true if execution was successful, else return false.
      */
-    bool startProgram(int StartProgram);
+    PIL_ERROR_CODE startProgram(int StartProgram);
 
     /**
      * @brief Stops the execution of the program.
      * @return true if command could be processed successfully, else return false.
      */
-    bool stopProgram();
+    PIL_ERROR_CODE stopProgram();
 
-    /**
-     * @brief Retrieves the last error from the climate chamber.
-     * @param errCodeRet variable stores the retrieved error code.
-     * @return true if command could be processed, else return false.
-     */
-    bool getErrorCode(int *errCodeRet);
 
     /**
      * @brief Acknowledge all errors on the climate chamber.
      * @return true if command could be processed, else return false.
      */
-    bool acknowledgeErrors();
+    PIL_ERROR_CODE acknowledgeErrors();
 
     /**
      * @brief Starts a thread, which continuously calls retrieveClimateChamberStatus() to retrieve temperature and humidity information from the climate chamber.
@@ -137,20 +132,20 @@ public:
      * @param intervalMs interval in milliseconds after which the humidity and temperature is refreshed.
      * @return true if thread could be started successfully, else return false.
      */
-    bool startMonitorThread(int intervalMs = 5000);
+    PIL_ERROR_CODE startMonitorThread(int intervalMs = 5000);
 
     /**
      * @brief Stops the monitor thread which continuously retrieves humidity and temperature data from the climate chamber.
      * @return true if the thread could be stopped successfully.
      */
-    bool stopMonitorThread();
+    PIL_ERROR_CODE stopMonitorThread();
 
     /**
      * @brief Register callback function to retrieve changes in humidity and temperature values.
      * @param callbackFunc function which is called if the humidity or temperature changes.
      * @return true if registration was successful, else return false.
      */
-    void registerHumidityTemperatureCallback(void (*callbackFunc)(float humidity, float temperature));
+    PIL_ERROR_CODE registerHumidityTemperatureCallback(void (*callbackFunc)(float humidity, float temperature));
 
     /**
      * @brief Function returns if the climate chamber is currently running or not.
@@ -240,7 +235,7 @@ private:
      * @param parsedCommand
      * @return
      */
-    bool
+    PIL_ERROR_CODE
     sendCommandGetResponse(std::map<CommandReturnValues, std::string> *parsedCommand, ClimateChamberCommand command, int nrArgs, ...);
 
     /**
@@ -250,17 +245,17 @@ private:
      */
     static int monitorThreadFunction(void *ptr);
 
-    static bool
+    static PIL_ERROR_CODE
     commandCreator(uint8_t *buffer, uint32_t *bufferLen, ClimateChamberCommand climateChamberCommand, uint16_t channel,
                    int numberArguments, ...);
 
-    static bool commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
+    static PIL_ERROR_CODE commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
                               std::map<CommandReturnValues, std::string> *parsedCommand);
 
 
-    bool startStopExecution(int command);
+    PIL_ERROR_CODE startStopExecution(int command);
 
-    static bool logMessageAndReturn(bool returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
+    static PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
 
 
 };
