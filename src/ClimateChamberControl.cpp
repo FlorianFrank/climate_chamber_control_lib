@@ -355,6 +355,7 @@ PIL_ERROR_CODE ClimateChamberControl::registerHumidityTemperatureCallback(void (
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Register temperature and humidity callback.");
     m_tempHumCallback = callbackFunc;
+    return PIL_NO_ERROR;
 }
 
 /*
