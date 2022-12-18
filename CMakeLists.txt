@@ -18,7 +18,10 @@ add_subdirectory(python_interface)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wpedantic")
 
 set(src_files "${CMAKE_CURRENT_SOURCE_DIR}/include/ClimateChamberControl.h"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/ClimateChamberControl.cpp")
+              "${CMAKE_CURRENT_SOURCE_DIR}/src/ClimateChamberControl.cpp"
+              "${CMAKE_CURRENT_SOURCE_DIR}/src/CommandCreator.cpp"
+              "${CMAKE_CURRENT_SOURCE_DIR}/src/CommandParser.cpp"
+              "${CMAKE_CURRENT_SOURCE_DIR}/src/Util.cpp")
 
 
 
