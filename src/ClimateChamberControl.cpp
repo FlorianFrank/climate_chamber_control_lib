@@ -10,51 +10,8 @@
 #include <cstdint>
 #include <cstdio>
 
-PIL::Logging ClimateChamberControl::m_Logger(DEBUG_LVL, nullptr);
-
 extern "C" {
 #include "ctlib/ErrorHandler.h"
-ClimateChamberControl ClimateChamberWrapper_py;
-
-bool Initialize(const char *ipAddr, uint16_t port, uint8_t channel) {
-    return ClimateChamberWrapper_py.initialize(ipAddr, port, channel);
-}
-bool DeInitialize() {
-    return ClimateChamberWrapper_py.deInitialize();
-}
-bool RetrieveClimateChamberStatus() {
-    return ClimateChamberWrapper_py.retrieveClimateChamberStatus();
-}
-float GetCurrentHumidity() {
-    return ClimateChamberWrapper_py.getCurrentHumidity();
-}
-float GetCurrentTemperature() {
-    return ClimateChamberWrapper_py.getCurrentTemperature();
-}
-float GetTargetHumidity() {
-    return ClimateChamberWrapper_py.getTargetHumidity();
-}
-void SetTargetHumidity(float targetHumidity) {
-    ClimateChamberWrapper_py.setTargetHumidity(targetHumidity);
-}
-float GetTargetTemperature() {
-    return ClimateChamberWrapper_py.getTargetTemperature();
-}
-void SetTargetTemperature(float targetTemperature) {
-    ClimateChamberWrapper_py.setTargetTemperature(targetTemperature);
-}
-bool StartExecution() {
-    return ClimateChamberWrapper_py.startExecution();
-}
-bool StopExecution() {
-    return ClimateChamberWrapper_py.stopExecution();
-}
-bool StartProgram(int programID) {
-    return ClimateChamberWrapper_py.startProgram(programID);
-}
-bool StopProgram() {
-    return ClimateChamberWrapper_py.stopProgram();
-}
 }
 
 #include <unistd.h> // usleep
@@ -72,8 +29,7 @@ bool StopProgram() {
 volatile bool threadRunning = false;
 
 
-ClimateChamberControl::ClimateChamberControl()
-{
+ClimateChamberControl::ClimateChamberControl(): m_Logger(DEBUG_LVL, nullptr){
 }
 
 ClimateChamberControl::~ClimateChamberControl()
@@ -87,17 +43,14 @@ PIL_ERROR_CODE ClimateChamberControl::initialize(const std::string &ipAddr, uint
 {
     m_channel = channel;
 
-    m_socket = new PIL::Socket(TCP, IPv4, "localhost", 8080 /*TODO what is 8080??*/, DEFAULT_TIMEOUT);
+    m_socket = new PIL::Socket(TCP, IPv4, "localhost", DEFAULT_PORT, DEFAULT_TIMEOUT);
     if (m_socket->GetLastError() != PIL_NO_ERROR)
         return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not create Socket (%d)",
                                    PIL_ErrorCodeToString(m_socket->GetLastError()));
 
-    // TODO maybe split function
-    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ipAddr.c_str(), port);
-    m_socket->Connect(const_cast<std::string &>(ipAddr), port); // TODO change underlying lib accepting const std::strings
-    if (m_socket->GetLastError() != PIL_NO_ERROR)
-        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not bind helperFiles (%s)",
-                                   PIL_ErrorCodeToString(m_socket->GetLastError()));
+    auto errCode = establishTCPConnection(ipAddr, DEFAULT_PORT);
+    if(errCode != PIL_NO_ERROR)
+        return errCode;
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate chamber initialized");
     m_Initialized = true;
@@ -108,12 +61,14 @@ PIL_ERROR_CODE ClimateChamberControl::initialize(const std::string &ipAddr, uint
 PIL_ERROR_CODE ClimateChamberControl::deInitialize()
 {
     if (!m_Initialized)
-        m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Nothing todo Climate Chamber not initialized yet");
+        m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Nothing todo Climate "
+                                                               "Chamber not initialized yet");
 
     // Exit loop in monitor thread, to allow joining the thread.
     auto errCode = stopMonitorThread();
     if (errCode != PIL_NO_ERROR)
-        return logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__, "Error could not stop monitor thread");
+        return logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__,
+                                   "Error could not stop monitor thread");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "De-initialization completed");
     return PIL_NO_ERROR;
@@ -129,20 +84,18 @@ PIL_ERROR_CODE ClimateChamberControl::retrieveClimateChamberStatus()
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    // TODO atof and atoi error detection
     m_TemperatureLock.lock();
-    m_CurrentTemperature = atof(parsedCommand.find(CURRENT_TEMPERATURE)->second.c_str());
-   // m_TargetTemperature = atof(parsedCommand.find(TARGET_TEMPERATURE)->second.c_str());
+    m_CurrentTemperature = std::stof(parsedCommand.find(CURRENT_TEMPERATURE)->second);
     m_TemperatureLock.unlock();
 
     m_HumidityLock.lock();
-    m_CurrentHumidity = atof(parsedCommand.find(CURRENT_HUMIDTY)->second.c_str());
-   // m_TargetHumidity = atof(parsedCommand.find(TARGET_HUMIDITY)->second.c_str());
+    m_CurrentHumidity = std::stof(parsedCommand.find(CURRENT_HUMIDTY)->second);
     m_HumidityLock.unlock();
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
-                   "Retrieve Climate Chamber values: (Current temperature: %f, Target temperature: %f, Current humidity: %f, Target humidity: %f",
-                   m_CurrentTemperature, m_TargetTemperature, m_CurrentHumidity, m_TargetHumidity);
+                   "Retrieve Climate Chamber values: (Current temperature: %f, Target temperature: %f, "
+                   "Current humidity: %f, Target humidity: %f", m_CurrentTemperature, m_TargetTemperature,
+                   m_CurrentHumidity, m_TargetHumidity);
     return PIL_NO_ERROR;
 }
 
@@ -158,54 +111,45 @@ float ClimateChamberControl::getCurrentTemperature()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Get current temperature: %d", m_CurrentTemperature);
 
     // Synchronize concurrent access with monitor thread.
-    m_TemperatureLock.lock(); // TODO Maybe use constructor/destructor mutex
-    float currentTemperature = m_CurrentTemperature;
-    m_TemperatureLock.unlock();
-
-    return currentTemperature;
+    const std::lock_guard<std::mutex> lock(m_TemperatureLock);
+    return m_CurrentTemperature;
 }
 
 
 float ClimateChamberControl::getCurrentHumidity()
 {
-    if (!m_Initialized)
-        return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
-         // TODO zero is misleading! Adjust return type
+    if (!m_Initialized){
+        logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__, "Climate Chamber not initialized yet");
+        return INVALID_HUMIDITY;
+    }
 
-    if (!m_Running)
+    if (!m_Running){
         return logMessageAndReturn(PIL_INTERFACE_CLOSED, WARNING_LVL, __FILENAME__, __LINE__,
                                    "The humidity can only be retrieved when the climate chamber is running");
+        return INVALID_HUMIDITY;
+    }
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Get current humidity: %d", m_CurrentHumidity);
 
     // Synchronize concurrent access with monitor thread.
-    m_HumidityLock.lock(); // TODO Maybe use constructor/destructor mutex
-    float currentHumidity = m_CurrentHumidity;
-    m_HumidityLock.unlock();
-
-    return currentHumidity;
+    const std::lock_guard<std::mutex> lockGuard(m_HumidityLock);
+    return m_CurrentHumidity;
 }
 
 
 float ClimateChamberControl::getTargetTemperature()
 {
     // Synchronize concurrent access with monitor thread.
-    m_TemperatureLock.lock(); // TODO Maybe use constructor/destructor mutex
-    float targetTemperature = m_TargetTemperature;
-    m_TemperatureLock.unlock();
-
-    return targetTemperature;
+    const std::lock_guard<std::mutex> lockGuard(m_TemperatureLock);
+    return m_TargetTemperature;
 }
 
 
 float ClimateChamberControl::getTargetHumidity()
 {
     // Synchronize concurrent access with monitor thread.
-    m_TemperatureLock.lock(); // TODO Maybe use constructor/destructor mutex
-    float targetTemperature = m_TargetHumidity;
-    m_TemperatureLock.unlock();
-
-    return targetTemperature;
+    const std::lock_guard<std::mutex> lockGuard(m_HumidityLock);
+    return m_TargetHumidity;
 }
 
 
@@ -216,9 +160,8 @@ PIL_ERROR_CODE ClimateChamberControl::setTargetTemperature(const float targetTem
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Set target temperature %f", targetTemperature);
 
-    m_TemperatureLock.lock(); // TODO Maybe use constructor/destructor mutex
+    const std::lock_guard<std::mutex> lockGuard(m_TemperatureLock);
     m_TargetTemperature = targetTemperature;
-    m_TemperatureLock.unlock();
 
     return PIL_NO_ERROR;
 }
@@ -235,9 +178,8 @@ PIL_ERROR_CODE ClimateChamberControl::setTargetHumidity(const float targetHumidi
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Set target humidity %f", targetHumidity);
 
-    m_HumidityLock.lock();  // TODO Maybe use constructor/destructor mutex
+    const std::lock_guard<std::mutex> lockGuard(m_HumidityLock);
     m_TargetHumidity = targetHumidity;
-    m_HumidityLock.unlock();
 
     return PIL_NO_ERROR;
 }
@@ -274,7 +216,7 @@ PIL_ERROR_CODE ClimateChamberControl::startProgram(const int programID)
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
+    int ret = std::stoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second);
     if (ret != 0) // TODO what is ret 0, use explicit error code enums
         return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Start program %d returns with error code %d", programID, ret);
@@ -291,7 +233,7 @@ PIL_ERROR_CODE ClimateChamberControl::stopProgram()
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
+    int ret = std::stoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second);
     if (ret != 0) // TODO what is ret != 0
         return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "Stop program returns with error code %d",
                                    0, ret);
@@ -308,7 +250,7 @@ PIL_ERROR_CODE ClimateChamberControl::acknowledgeErrors()
     if (errCode != PIL_NO_ERROR)
         return errCode;
 
-    int ret = atoi(parsedCommand.find(COMMAND_ERROR_ACK)->second.c_str());
+    int ret = std::stoi(parsedCommand.find(COMMAND_ERROR_ACK)->second);
     if (ret != 0)
         return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, "acknowledgeErrors returns error code %d",
                                    ret);
@@ -404,7 +346,7 @@ PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandRet
     uint16_t bufferLen = RECEIVE_RESPONSE_BUFFER_SIZE;
 
     int ret = -1;
-   int waitRet = -1;
+   int waitRet;
 int ctr = 0;
     do
     {
@@ -444,16 +386,15 @@ int ctr = 0;
 
 /*static*/ int ClimateChamberControl::monitorThreadFunction(void *ptr)
 {
+    assert(ptr == nullptr);
+    auto *climateChamberWrapper = reinterpret_cast<ClimateChamberControl *>(ptr);
     if (threadRunning)
-        return logMessageAndReturn(PIL_THREAD_NOT_FOUND, WARNING_LVL, __FILENAME__, __LINE__, __FILENAME__,
+        return climateChamberWrapper->logMessageAndReturn(PIL_THREAD_NOT_FOUND, WARNING_LVL, __FILENAME__, __LINE__, __FILENAME__,
                                    "Monitor thread still running -> exit thread"); // TODO change return type
 
-    if (!ptr)
-        return logMessageAndReturn(PIL_INVALID_ARGUMENTS, ERROR_LVL, __FILENAME__, __LINE__, __FILENAME__,
-                                   "No valid ClimateChamberWrapper object passed to the monitor thread -> exit thread");
 
-    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "startMonitorThread");
-    auto *climateChamberWrapper = reinterpret_cast<ClimateChamberControl *>(ptr);
+    climateChamberWrapper->getLogger().LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "startMonitorThread");
+
     threadRunning = true;
     while (threadRunning)
     {
@@ -462,7 +403,7 @@ int ctr = 0;
 
         auto errCode = climateChamberWrapper->retrieveClimateChamberStatus();
         if (errCode != PIL_NO_ERROR)
-            m_Logger.LogMessage(WARNING_LVL, __FILENAME__, __LINE__, "Error while calling retrieveClimateChamberStatus");
+            climateChamberWrapper->getLogger().LogMessage(WARNING_LVL, __FILENAME__, __LINE__, "Error while calling retrieveClimateChamberStatus");
 
         float currentTemperature = climateChamberWrapper->m_CurrentTemperature;
         float currentHumidity = climateChamberWrapper->m_CurrentHumidity;
@@ -475,13 +416,13 @@ int ctr = 0;
         }
 
         // Sleep m_MonitoringThreadInterval milliseconds
-        usleep(climateChamberWrapper->m_MonitoringThreadInterval * 1e3);
+        usleep(static_cast<unsigned int>(climateChamberWrapper->m_MonitoringThreadInterval * 1e3));
     }
     return 0;
 }
 
 
-/*static*/ PIL_ERROR_CODE ClimateChamberControl::commandCreator(uint8_t *buffer, uint32_t *bufferLen,
+PIL_ERROR_CODE ClimateChamberControl::commandCreator(uint8_t *buffer, uint32_t *bufferLen,
                                                       ClimateChamberCommand climateChamberCommand,
                                                       uint16_t channel, int numberArguments, ...)
 {
@@ -718,6 +659,15 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
     m_Logger.LogMessage(level, fileName, lineNumber, buffer);
     va_end(vaList);
     return returnValue;
+}
+
+PIL_ERROR_CODE ClimateChamberControl::establishTCPConnection(const std::string &ip, uint16_t port) {
+    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ip.c_str(), port);
+    m_socket->Connect(const_cast<std::string &>(ip), port); // TODO change underlying lib accepting const std::strings
+    if (m_socket->GetLastError() != PIL_NO_ERROR)
+        return logMessageAndReturn(m_socket->GetLastError(), ERROR_LVL, __FILENAME__, __LINE__, "Error could not bind helperFiles (%s)",
+                                   PIL_ErrorCodeToString(m_socket->GetLastError()));
+    return PIL_NO_ERROR;
 }
 
 

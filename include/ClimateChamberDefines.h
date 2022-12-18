@@ -17,6 +17,7 @@
 #define MIN_TEMPERATURE -70
 
 #define ZERO_KELVIN     -273
+#define INVALID_HUMIDITY -1
 
 #define MIN_PROGRAM_ID  0
 #define MAX_PROGRAM_ID  9999

@@ -153,6 +153,8 @@ public:
      */
     [[nodiscard]] bool isRunning() const { return m_Running; }
 
+    PIL::Logging& getLogger() { return m_Logger; }
+
 private:
     /** Flag indicates if the climate chamber is initialized. **/
     bool m_Initialized{};
@@ -192,7 +194,7 @@ private:
     */
     std::mutex m_HumidityLock;
 
-    static PIL::Logging m_Logger;
+    PIL::Logging m_Logger;
 
     /**
      * @brief Callback function is called from the monitor thread if either the humidity or the temperature changes.
@@ -245,17 +247,15 @@ private:
      */
     static int monitorThreadFunction(void *ptr);
 
-    static PIL_ERROR_CODE
+    PIL_ERROR_CODE
     commandCreator(uint8_t *buffer, uint32_t *bufferLen, ClimateChamberCommand climateChamberCommand, uint16_t channel,
                    int numberArguments, ...);
 
-    static PIL_ERROR_CODE commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
+    PIL_ERROR_CODE commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
                               std::map<CommandReturnValues, std::string> *parsedCommand);
 
 
     PIL_ERROR_CODE startStopExecution(int command);
-
-    static PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
-
-
+    PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
+    PIL_ERROR_CODE establishTCPConnection(const std::string &ip, uint16_t port);
 };
