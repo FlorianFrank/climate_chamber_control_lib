@@ -111,8 +111,9 @@ PIL_ERROR_CODE ClimateChamberControl::deInitialize()
         m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Nothing todo Climate Chamber not initialized yet");
 
     // Exit loop in monitor thread, to allow joining the thread.
-    if (!stopMonitorThread())
-        return logMessageAndReturn(PIL_THREAD_NOT_FOUND, ERROR_LVL, __FILENAME__, __LINE__, "Error could not stop monitor thread");
+    auto errCode = stopMonitorThread();
+    if (errCode != PIL_NO_ERROR)
+        return logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__, "Error could not stop monitor thread");
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "De-initialization completed");
     return PIL_NO_ERROR;
@@ -124,8 +125,9 @@ PIL_ERROR_CODE ClimateChamberControl::retrieveClimateChamberStatus()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call retrieveClimateChamberStatus");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
-    if (!sendCommandGetResponse(&parsedCommand, GET_TEMPERATURE_HUMIDITY, 0))
-        return PIL_UNKNOWN_ERROR;
+    auto errCode = sendCommandGetResponse(&parsedCommand, GET_TEMPERATURE_HUMIDITY, 0);
+    if (errCode != PIL_NO_ERROR)
+        return errCode;
 
     // TODO atof and atoi error detection
     m_TemperatureLock.lock();
@@ -246,8 +248,9 @@ PIL_ERROR_CODE ClimateChamberControl::startExecution()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__,
                    "Start climate chamber execution with values: (temperature: %f, humidity: %f)", m_TargetTemperature,
                    m_TargetHumidity);
-    if (!startStopExecution(100)) // TODO what is command 100 don't use magic numbers
-        return PIL_UNKNOWN_ERROR;
+    auto errCode = startStopExecution(100);
+    if (errCode != PIL_NO_ERROR) // TODO what is command 100 don't use magic numbers
+        return errCode;
     m_Running = true;
     return PIL_NO_ERROR;
 }
@@ -267,8 +270,9 @@ PIL_ERROR_CODE ClimateChamberControl::startProgram(const int programID)
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call startProgram");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
-    if (!sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, programID))
-        return PIL_UNKNOWN_ERROR;
+    auto errCode = sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, programID);
+    if (errCode != PIL_NO_ERROR)
+        return errCode;
 
     int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
     if (ret != 0) // TODO what is ret 0, use explicit error code enums
@@ -283,8 +287,9 @@ PIL_ERROR_CODE ClimateChamberControl::stopProgram()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call stopProgram");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
-    if (!sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, 0))
-        return PIL_UNKNOWN_ERROR;
+    auto errCode = sendCommandGetResponse(&parsedCommand, START_PROGRAM, 1, 0);
+    if (errCode != PIL_NO_ERROR)
+        return errCode;
 
     int ret = atoi(parsedCommand.find(COMMAND_START_PROGRAM_RET)->second.c_str());
     if (ret != 0) // TODO what is ret != 0
@@ -299,8 +304,9 @@ PIL_ERROR_CODE ClimateChamberControl::acknowledgeErrors()
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Call acknowledgeErrors");
 
     std::map<CommandReturnValues, std::string> parsedCommand;
-    if (!sendCommandGetResponse(&parsedCommand, ACKNOWLEDGE_ERRORS, 0))
-        return PIL_UNKNOWN_ERROR;
+    auto errCode = sendCommandGetResponse(&parsedCommand, ACKNOWLEDGE_ERRORS, 0);
+    if (errCode != PIL_NO_ERROR)
+        return errCode;
 
     int ret = atoi(parsedCommand.find(COMMAND_ERROR_ACK)->second.c_str());
     if (ret != 0)
@@ -375,10 +381,11 @@ PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandRet
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Create command");
     va_list vaList;
     va_start(vaList, nrArgs);
-    if (!commandCreator(commandBuffer, &commandBufferSize, command, m_channel, nrArgs, vaList))
+    auto errCode = commandCreator(commandBuffer, &commandBufferSize, command, m_channel, nrArgs, vaList);
+    if (errCode != PIL_NO_ERROR)
     {
         va_end(vaList); // TODO isn't there a way to clean it up automatically after leaving the scope of the function
-        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
+        return logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
     }
 
     va_end(vaList);
@@ -425,8 +432,9 @@ int ctr = 0;
     if (ret == -1)
         m_Logger.LogMessage(ERROR_LVL, __FUNCTION__, __LINE__, "Error while calling read"); // Should we return false?
 
-    if (!commandParser(receiveBuffer, bufferLen, command, parsedCommand))
-        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FUNCTION__, __LINE__,
+    errCode = commandParser(receiveBuffer, bufferLen, command, parsedCommand);
+    if (errCode != PIL_NO_ERROR)
+        return logMessageAndReturn(errCode, ERROR_LVL, __FUNCTION__, __LINE__,
                                    "Error could not parse GET_TEMPERATURE_HUMIDITY");
 
     return PIL_NO_ERROR;
@@ -451,7 +459,8 @@ int ctr = 0;
         float previousTemperature = climateChamberWrapper->m_CurrentTemperature;
         float previousHumidity = climateChamberWrapper->m_CurrentHumidity;
 
-        if (!climateChamberWrapper->retrieveClimateChamberStatus())
+        auto errCode = climateChamberWrapper->retrieveClimateChamberStatus();
+        if (errCode != PIL_NO_ERROR)
             m_Logger.LogMessage(WARNING_LVL, __FILENAME__, __LINE__, "Error while calling retrieveClimateChamberStatus");
 
         float currentTemperature = climateChamberWrapper->m_CurrentTemperature;
@@ -669,11 +678,12 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
 
     uint8_t commandBuffer[128];
     uint32_t commandBufferSize = 128;
-    if (!commandCreator(commandBuffer, &commandBufferSize, SET_TEMPERATURE_HUMIDITY, 1, 3, m_TargetTemperature,
-                        m_TargetHumidity, command))
+    auto errCode = commandCreator(commandBuffer, &commandBufferSize, SET_TEMPERATURE_HUMIDITY, 1, 3, m_TargetTemperature,
+                                  m_TargetHumidity, command);
+    if (errCode != PIL_NO_ERROR)
     {
         m_Logger.LogMessage(ERROR_LVL, __FILENAME__, __LINE__, "Error commandCreator returns false");
-        return PIL_UNKNOWN_ERROR;
+        return errCode;
     }
 
     m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Send command %s", commandBuffer);
@@ -686,13 +696,14 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
     uint16_t bufferLen = 512;
     m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen)); // TODO
     std::map<ClimateChamberControl::CommandReturnValues, std::string> parsedCommandMap;
-    if (!commandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap))
-        return logMessageAndReturn(PIL_UNKNOWN_ERROR, ERROR_LVL, __FILENAME__, __LINE__,
+    errCode = commandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap);
+    if (errCode != PIL_NO_ERROR)
+        return logMessageAndReturn(errCode, ERROR_LVL, __FILENAME__, __LINE__,
                                    "Error could not parse SET_TEMPERATURE_HUMIDITY");
 
-    /* m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate Chamber is started with target temperature: %d, "
+    m_Logger.LogMessage(DEBUG_LVL, __FILENAME__, __LINE__, "Climate Chamber is started with target temperature: %d, "
                                                        "target humidity: %d (Command: %s)", m_TargetTemperature,
-                    m_TargetHumidity, commandBuffer);*/
+                    m_TargetHumidity, commandBuffer);
     m_Running = true;
     return PIL_NO_ERROR;
 }
