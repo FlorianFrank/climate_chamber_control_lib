@@ -11,6 +11,7 @@
 #include "../common_tools_lib/ErrorHandling/include/ctlib/ErrorCodeDefines.h"
 
 
+
 #include <thread> // std::thread
 #include <mutex> // std::mutex
 #include <map> // std::map
@@ -19,6 +20,9 @@
 namespace PIL {
     class Socket;
 }
+
+class Util;
+class CommandCreator;
 
 /**
  * @class This class is a wrapper to control the Weiss Technik LabEvent climate simulation chamber.
@@ -247,15 +251,13 @@ private:
      */
     static int monitorThreadFunction(void *ptr);
 
-    PIL_ERROR_CODE
-    commandCreator(uint8_t *buffer, uint32_t *bufferLen, ClimateChamberCommand climateChamberCommand, uint16_t channel,
-                   int numberArguments, ...);
-
     PIL_ERROR_CODE commandParser(const uint8_t *buffer, uint32_t bufferLen, ClimateChamberCommand commandToParse,
                               std::map<CommandReturnValues, std::string> *parsedCommand);
 
 
     PIL_ERROR_CODE startStopExecution(int command);
-    PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
     PIL_ERROR_CODE establishTCPConnection(const std::string &ip, uint16_t port);
+
+    Util *m_Util;
+    CommandCreator *m_CommandCreator;
 };
