@@ -9,7 +9,7 @@
 #include "ctlib/Logging.hpp"
 #include "CommandParser.h"
 
-
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 
