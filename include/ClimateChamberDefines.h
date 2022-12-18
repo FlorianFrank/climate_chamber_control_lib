@@ -1,9 +1,8 @@
-//
-// Created by florianfrank on 21.07.22.
-//
-
-#ifndef CLIMATECHAMBERCONTROLLIB_DEFAULTCONFIG_H
-#define CLIMATECHAMBERCONTROLLIB_DEFAULTCONFIG_H
+/**
+ * @author Florian Frank
+ * @copyright University of Passau - Chair of computer engineering
+ */
+#pragma once
 
 #define DEFAULT_PORT    2049
 #define DEFAULT_TIMEOUT 5000
@@ -41,5 +40,3 @@ enum ClimateChamberCommand
     /** Commands stops the execution of a program stored on the climate chamber. */
     STOP_PROGRAM
 };
-
-#endif //CLIMATECHAMBERCONTROLLIB_DEFAULTCONFIG_H
