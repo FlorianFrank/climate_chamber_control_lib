@@ -10,8 +10,8 @@
 #define DEFAULT_CHANNEL 1
 #define MAX_CHANNEL     31
 
-#define MAX_HUMIDITY    0
-#define MIN_HUMIDITY    100
+#define MIN_HUMIDITY    0
+#define MAX_HUMIDITY    100
 
 #define MAX_TEMPERATURE 200
 #define MIN_TEMPERATURE -70

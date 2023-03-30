@@ -255,7 +255,7 @@ private:
 
     PIL_ERROR_CODE startStopExecution(int command);
 
-    static PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
+    static PIL_ERROR_CODE logMessageAndReturn(PIL_ERROR_CODE returnValue, PIL::Level level, const char* fileName, unsigned int lineNumber, const char* message, ...);
 
 
 };
