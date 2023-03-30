@@ -226,7 +226,7 @@ PIL_ERROR_CODE ClimateChamberControl::setTargetHumidity(const float targetHumidi
 
     if (targetHumidity > MAX_HUMIDITY) // TODO this actually follows a function, e.g. at lower temperatures only lower humidity values are allowed
         return logMessageAndReturn(PIL_INVALID_ARGUMENTS, PIL::WARNING, __FILENAME__, __LINE__,
-                                   "Could not set humidity %d only values from [0,100] are allowed");
+                                   "Could not set humidity %d only values from [0,100] are allowed", targetHumidity);
 
     m_Logger.LogMessage(PIL::DEBUG, __FILENAME__, __LINE__, "Set target humidity %f", targetHumidity);
 
