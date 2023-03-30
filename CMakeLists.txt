@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 include(cmake/build_config.cmake)
 add_definitions(-DCXX=1)
-set (CMAKE_CXX_STANDARD 11)
-
+set(CMAKE_CXX_STANDARD 14)
 
 project(climate_chamber_lib VERSION 1.0.0)
 
@@ -25,6 +24,7 @@ set(src_files "${CMAKE_CURRENT_SOURCE_DIR}/include/ClimateChamberControl.h"
 add_library(climate_chamber_lib SHARED ${src_files})
 
 target_include_directories(climate_chamber_lib PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                                                            "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Threading/include"
                                                             "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Communication/include"
                                                             "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Additional"
                                                             "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Logging/include"
@@ -36,6 +36,7 @@ target_link_libraries(climate_chamber_lib common_tools_lib pthread common_tools_
 add_executable(ClimateChamberTest test/Main.cpp)
 
 target_include_directories(ClimateChamberTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                                                      "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Threading/include"
                                                       "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Communication/include"
                                                       "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Additional"
                                                       "${CMAKE_CURRENT_SOURCE_DIR}/common_tools_lib/Logging/include"
