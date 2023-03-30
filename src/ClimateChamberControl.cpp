@@ -88,7 +88,7 @@ PIL_ERROR_CODE ClimateChamberControl::initialize(const std::string &ipAddr, uint
 {
     m_channel = channel;
 
-    m_socket = new PIL::Socket(TCP, IPv4, "localhost", 8080 /*TODO what is 8080??*/, DEFAULT_TIMEOUT);
+    m_socket = new PIL::Socket(TCP, IPv4, ipAddr, port, 0);
 
     // TODO maybe split function
     m_Logger.LogMessage(PIL::DEBUG, __FILENAME__, __LINE__, "Connect to climate chamber at %s:%d", ipAddr.c_str(), port);
@@ -394,9 +394,8 @@ PIL_ERROR_CODE ClimateChamberControl::sendCommandGetResponse(std::map<CommandRet
      */
     uint8_t receiveBuffer[RECEIVE_RESPONSE_BUFFER_SIZE];
     memset(receiveBuffer, 0x00, RECEIVE_RESPONSE_BUFFER_SIZE);
-    uint16_t bufferLen = RECEIVE_RESPONSE_BUFFER_SIZE;
+    uint32_t bufferLen = RECEIVE_RESPONSE_BUFFER_SIZE;
 
-    int ret = -1;
    int waitRet = -1;
 int ctr = 0;
     do
@@ -417,13 +416,9 @@ int ctr = 0;
 
     m_Logger.LogMessage(PIL::DEBUG, __FUNCTION__, __LINE__, "Data avail ->Read");
 
-    m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen));
+    m_socket->Receive(receiveBuffer, &bufferLen);
     printf("%s\n", receiveBuffer);
     m_Logger.LogMessage(PIL::DEBUG, __FUNCTION__, __LINE__, "Read finished");
-
-
-    if (ret == -1)
-        m_Logger.LogMessage(PIL::ERROR, __FUNCTION__, __LINE__, "Error while calling read"); // Should we return false?
 
     errCode = commandParser(receiveBuffer, bufferLen, command, parsedCommand);
     if (errCode != PIL_NO_ERROR)
@@ -684,8 +679,8 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
 
     uint8_t receiveBuffer[512];
     memset(receiveBuffer, 0x00, 512);
-    uint16_t bufferLen = 512;
-    m_socket->Receive(receiveBuffer, reinterpret_cast<uint32_t *>(&bufferLen)); // TODO
+    uint32_t bufferLen = 512;
+    m_socket->Receive(receiveBuffer, &bufferLen); // TODO
     std::map<ClimateChamberControl::CommandReturnValues, std::string> parsedCommandMap;
     errCode = commandParser(receiveBuffer, bufferLen, SET_TEMPERATURE_HUMIDITY, &parsedCommandMap);
     if (errCode != PIL_NO_ERROR)
@@ -693,8 +688,7 @@ PIL_ERROR_CODE ClimateChamberControl::startStopExecution(int command)
                                    "Error could not parse SET_TEMPERATURE_HUMIDITY");
 
     m_Logger.LogMessage(PIL::DEBUG, __FILENAME__, __LINE__, "Climate Chamber is started with target temperature: %d, "
-                                                       "target humidity: %d (Command: %s)", m_TargetTemperature,
-                    m_TargetHumidity, commandBuffer);
+                                                       "target humidity: %d", m_TargetTemperature, m_TargetHumidity);
     m_Running = true;
     return PIL_NO_ERROR;
 }
