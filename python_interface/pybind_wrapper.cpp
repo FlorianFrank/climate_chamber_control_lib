@@ -8,7 +8,7 @@ namespace  py = pybind11;
 
 PYBIND11_MODULE(py_climate_chamber_lib, m) {
 
-    enum_<PIL_ERROR_CODE>(m, "ERROR_CODE")
+    /*enum_<PIL_ERROR_CODE>(m, "ERROR_CODE")
         .value("NO_ERROR", PIL_NO_ERROR)
         .value("INVALID_ARGUMENTS", PIL_INVALID_ARGUMENTS)
         .value("ERRNO", PIL_ERRNO)
@@ -23,7 +23,7 @@ PYBIND11_MODULE(py_climate_chamber_lib, m) {
         .value("ONLY_PARTIALLY_READ_WRITTEN", PIL_ONLY_PARTIALLY_READ_WRITTEN)
         .value("NO_SUCH_FILE", PIL_NO_SUCH_FILE)
         .value("UNKNOWN_ERROR", PIL_UNKNOWN_ERROR)
-        .value("XML_PARSING_ERROR", PIL_XML_PARSING_ERROR);
+        .value("XML_PARSING_ERROR", PIL_XML_PARSING_ERROR);*/
 
     class_<ClimateChamberControl>(m, "ClimateChamberControl")
             .def(pybind11::init<>())

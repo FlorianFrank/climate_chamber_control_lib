@@ -111,9 +111,9 @@ int main() {
 
 ### 2.1 Using the python-interface
 
-The library can be accessed by a python interface as well. To run the library requires a python version < ??. 
-The climate_chamber_control_library can be accessed by copying the library file directly next to the python script and
-by importing it using following command: 
+The library can be accessed by a python interface as well. To run the library requires a python version > 3.10. 
+The lib can be installed using pip by executing `pip install .` in the root directory of this project.
+You can import it using the following command: 
 
 ```python
 from py_climate_chamber_lib import *
